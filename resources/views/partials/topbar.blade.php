@@ -78,16 +78,7 @@
                     System Status
                 </a>
                 @endif
-
-                <div class="settings-divider"></div>
-
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit" class="settings-item settings-logout">
-                        <i class="ti ti-logout"></i>
-                        Logout
-                    </button>
-                </form>
+                
             </div>
         </div>
 
