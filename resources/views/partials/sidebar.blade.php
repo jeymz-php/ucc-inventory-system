@@ -78,8 +78,13 @@
         {{-- Super Admin only --}}
         @if(auth()->user()->role === 'superadmin')
         <a href="{{ route('condemned') }}"
-           class="nav-item {{ request()->routeIs('condemned') ? 'active' : '' }}">
+        class="nav-item {{ request()->routeIs('condemned') ? 'active' : '' }}">
             <i class="ti ti-alert-triangle"></i> Condemned
+        </a>
+
+        <a href="{{ route('system.status') }}"
+        class="nav-item {{ request()->routeIs('system.*') ? 'active' : '' }}">
+            <i class="ti ti-activity"></i> System Status
         </a>
         @endif
 

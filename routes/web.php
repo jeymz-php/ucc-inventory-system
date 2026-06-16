@@ -4,6 +4,13 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Auth\MultiStepRegisterController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\UserManagementController;
+use App\Http\Controllers\Auth\AdminLoginController;
+use App\Http\Controllers\SystemStatusController;
+
+Route::middleware('auth')->group(function () {
+    Route::put('/password/change', [App\Http\Controllers\PasswordChangeController::class, 'update'])->name('password.change');
+});
 
 // Landing page
 Route::get('/', function () {
@@ -44,4 +51,23 @@ Route::middleware(['auth', 'role:admin,superadmin'])->group(function () {
     Route::get('/history',     fn() => view('pages.history'))->name('history');
     Route::get('/condemned',   fn() => view('pages.condemned'))->name('condemned');
     Route::get('/users',       fn() => view('pages.users'))->name('users');
+
+    Route::get('/users',           [UserManagementController::class, 'index'])->name('users');
+    Route::post('/users',          [UserManagementController::class, 'store'])->name('users.store');
+    Route::put('/users/{user}',    [UserManagementController::class, 'update'])->name('users.update');
+    Route::delete('/users/{user}', [UserManagementController::class, 'destroy'])->name('users.destroy');
+    Route::patch('/users/{user}/archive', [UserManagementController::class, 'archive'])->name('users.archive');
+});
+
+// Admin login (bypasses system down)
+Route::get('/admin/login',  [AdminLoginController::class, 'showLoginForm'])->name('admin.login');
+Route::post('/admin/login', [AdminLoginController::class, 'login'])->name('admin.login.submit');
+Route::post('/admin/logout',[AdminLoginController::class, 'logout'])->name('admin.logout');
+
+// System Status (superadmin only)
+Route::middleware(['auth', 'role:superadmin'])->prefix('system')->name('system.')->group(function () {
+    Route::get('/status',              [SystemStatusController::class, 'index'])->name('status');
+    Route::post('/status/toggle',      [SystemStatusController::class, 'toggle'])->name('status.toggle');
+    Route::patch('/logs/{log}/resolve',[SystemStatusController::class, 'resolveLog'])->name('logs.resolve');
+    Route::delete('/logs/clear',       [SystemStatusController::class, 'clearLogs'])->name('logs.clear');
 });

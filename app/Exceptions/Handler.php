@@ -2,40 +2,35 @@
 
 namespace App\Exceptions;
 
+use App\Models\SystemLog;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Throwable;
 
 class Handler extends ExceptionHandler
 {
-    /**
-     * A list of the exception types that are not reported.
-     *
-     * @var array<int, class-string<Throwable>>
-     */
-    protected $dontReport = [
-        //
-    ];
+    protected $dontFlash = ['current_password', 'password', 'password_confirmation'];
 
-    /**
-     * A list of the inputs that are never flashed for validation exceptions.
-     *
-     * @var array<int, string>
-     */
-    protected $dontFlash = [
-        'current_password',
-        'password',
-        'password_confirmation',
-    ];
-
-    /**
-     * Register the exception handling callbacks for the application.
-     *
-     * @return void
-     */
     public function register()
     {
         $this->reportable(function (Throwable $e) {
-            //
+            try {
+                if (app()->runningInConsole()) return;
+                if ($e instanceof \Illuminate\Validation\ValidationException) return;
+                if ($e instanceof \Illuminate\Auth\AuthenticationException) return;
+
+                SystemLog::create([
+                    'type'       => 'error',
+                    'title'      => class_basename($e),
+                    'message'    => substr($e->getMessage(), 0, 500),
+                    'url'        => request()->fullUrl(),
+                    'method'     => request()->method(),
+                    'user_id'    => auth()->id(),
+                    'user_role'  => auth()->user()?->role,
+                    'ip_address' => request()->ip(),
+                ]);
+            } catch (\Exception $logEx) {
+                // Silently fail to avoid infinite loop
+            }
         });
     }
 }
