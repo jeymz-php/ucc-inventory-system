@@ -29,7 +29,19 @@ Auth::routes([
     'reset' => false,
 ]);
 
-// Dashboard (protected)
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware('auth')->name('dashboard');
+/// Dashboard — all authenticated users
+Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index'])
+    ->middleware('auth')
+    ->name('dashboard');
+
+// Admin + Super Admin only routes (scaffolded for later)
+Route::middleware(['auth', 'role:admin,superadmin'])->group(function () {
+    Route::get('/inventory',   fn() => view('pages.inventory'))->name('inventory');
+    Route::get('/equipment',   fn() => view('pages.equipment'))->name('equipment');
+    Route::get('/locations',   fn() => view('pages.locations'))->name('locations');
+    Route::get('/categories',  fn() => view('pages.categories'))->name('categories');
+    Route::get('/consumables', fn() => view('pages.consumables'))->name('consumables');
+    Route::get('/history',     fn() => view('pages.history'))->name('history');
+    Route::get('/condemned',   fn() => view('pages.condemned'))->name('condemned');
+    Route::get('/users',       fn() => view('pages.users'))->name('users');
+});
