@@ -1,0 +1,7 @@
+Improvised UCC - Inventory Management System
+
+June 16, 2026
+- Homepage added, selecting whether logging an account or register an account
+- Login and Register added, improved UI compared to originated UCC - IMS
+- Forgot Password added, improved UI and functions to originated UCC - IMS
+- Sample Dashboard added, if logging an account working
