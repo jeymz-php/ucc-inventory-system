@@ -410,6 +410,110 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #c5d5ca; border-radius: 4px; }
 
+        /* ══════════════════════════════════════
+        UNIFIED DATA TABLE STYLES
+        ══════════════════════════════════════ */
+        .data-table-wrap { overflow-x: auto; }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th {
+            padding: 11px 16px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-muted);
+            background: #fafafa;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        .data-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tr:hover td { background: #fafefe; }
+
+        .cell-primary {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 13px;
+        }
+
+        .cell-secondary {
+            font-size: 11.5px;
+            color: var(--text-muted);
+            margin-top: 2px;
+            line-height: 1.4;
+        }
+
+        /* Chip badges — reused across tables */
+        .chip-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+
+        .chip-campus    { background: #eff6ff; color: #2563eb; }
+        .chip-type      { background: #f4f0ff; color: #7c3aed; }
+        .chip-equipment-zero { background: #f5f5f5; color: #999; }
+        .chip-equipment-has  { background: #f0faf4; color: var(--green-dark); }
+
+        .chip-status-active   { background: #f0faf4; color: var(--green-dark); }
+        .chip-status-inactive { background: #fff5f5; color: var(--red); }
+
+        .chip-dash {
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .table-actions {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .table-icon-btn {
+            width: 30px; height: 30px;
+            border-radius: 7px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px;
+            border: none; cursor: pointer;
+            transition: opacity 0.15s, transform 0.1s;
+            text-decoration: none;
+        }
+        .table-icon-btn:hover { opacity: 0.8; transform: translateY(-1px); }
+
+        .table-icon-btn.view   { background: #eff6ff; color: #3b82f6; }
+        .table-icon-btn.edit   { background: #f4f0ff; color: #7c3aed; }
+        .table-icon-btn.delete { background: #fff5f5; color: var(--red); }
+        .table-icon-btn.archive{ background: #fff8f0; color: var(--orange); }
+
+        .capacity-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12.5px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        .capacity-pill i { font-size: 13px; color: var(--text-muted); }
+
         /* Responsive */
         @media (max-width: 1024px) {
             .stats-grid { grid-template-columns: repeat(2, 1fr); }

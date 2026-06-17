@@ -19,6 +19,8 @@ class DatabaseSeeder extends Seeder
             DepartmentSeeder::class,
             SuperAdminSeeder::class,
             SystemStatusSeeder::class,
+            LocationTypeSeeder::class,
+            LocationSeeder::class,
         ]);
     }
 }

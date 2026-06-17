@@ -16,3 +16,8 @@ June 17, 2026
 - System Status implemented
 - System can go UP and DOWN for maintenance and resolving problem encountered
 - Users can't access the system during maintenance or system DOWN, only Admin and Super Admin will access for a while
+
+June 17, 2026 - Part II
+- Inventory page for Admin/Super Admin implemented
+- Rooms in the Offices/Departments implemented, minimal UI for perfect use
+- Locations page for Admin/Super Admin implemented, minimal UI for perfect use
