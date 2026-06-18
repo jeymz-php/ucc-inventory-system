@@ -21,3 +21,8 @@ June 17, 2026 - Part II
 - Inventory page for Admin/Super Admin implemented
 - Rooms in the Offices/Departments implemented, minimal UI for perfect use
 - Locations page for Admin/Super Admin implemented, minimal UI for perfect use
+
+June 18, 2026 - Part I
+- Locations page for Admin/Super Admin improved the Pagination UI
+- All Equipment page implemented, minimal UI
+- Tables like Computer/General/Kitchen/Laboratory/Office Equipment are added, seed anytime

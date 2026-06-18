@@ -11,6 +11,7 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\LocationsController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PasswordChangeController;
+use App\Http\Controllers\EquipmentController;
 
 // ──────────────────────────────────────────────
 // Landing page
@@ -68,7 +69,7 @@ Route::middleware(['auth', 'role:admin,superadmin'])->group(function () {
 
     Route::get('/locations', [LocationsController::class, 'index'])->name('locations');
 
-    Route::get('/equipment',   fn() => view('pages.equipment'))->name('equipment');
+    Route::get('/equipment', [EquipmentController::class, 'index'])->name('equipment');
     Route::get('/categories',  fn() => view('pages.categories'))->name('categories');
     Route::get('/consumables', fn() => view('pages.consumables'))->name('consumables');
     Route::get('/history',     fn() => view('pages.history'))->name('history');

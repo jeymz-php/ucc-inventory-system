@@ -411,6 +411,71 @@
         ::-webkit-scrollbar-thumb { background: #c5d5ca; border-radius: 4px; }
 
         /* ══════════════════════════════════════
+        PAGINATION
+        ══════════════════════════════════════ */
+        .pagination {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            list-style: none;
+            flex-wrap: wrap;
+        }
+
+        .pagination li { display: flex; }
+
+        .pagination li span,
+        .pagination li a {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 34px;
+            height: 34px;
+            padding: 0 10px;
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: 8px;
+            text-decoration: none;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            background: #fff;
+            transition: all 0.15s;
+        }
+
+        .pagination li a:hover {
+            background: var(--green-light);
+            border-color: var(--green-dark);
+            color: var(--green-dark);
+        }
+
+        .pagination li.active span {
+            background: var(--green-dark);
+            border-color: var(--green-dark);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .pagination li.disabled span {
+            color: var(--text-muted);
+            background: #fafafa;
+            cursor: not-allowed;
+        }
+
+        .pagination-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .pagination-info {
+            font-size: 12.5px;
+            color: var(--text-muted);
+        }
+
+        /* ══════════════════════════════════════
         UNIFIED DATA TABLE STYLES
         ══════════════════════════════════════ */
         .data-table-wrap { overflow-x: auto; }

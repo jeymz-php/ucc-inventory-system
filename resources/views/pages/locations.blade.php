@@ -137,8 +137,11 @@
     </div>
 
     @if($locations->hasPages())
-    <div style="padding:1rem 1.25rem; border-top:1px solid var(--border);">
-        {{ $locations->links() }}
+    <div class="pagination-wrap">
+        <div class="pagination-info">
+            Showing {{ $locations->firstItem() }} to {{ $locations->lastItem() }} of {{ $locations->total() }} results
+        </div>
+        {{ $locations->onEachSide(1)->links() }}
     </div>
     @endif
 </div>
