@@ -201,7 +201,7 @@
 .settings-divider { height: 1px; background: var(--border); margin: 4px 0; }
 
 /* ── CHANGE PASSWORD MODAL ── */
-.modal-overlay {
+/* .modal-overlay {
     display: none; position: fixed; inset: 0;
     background: rgba(0,0,0,0.45); z-index: 300;
     align-items: center; justify-content: center;
@@ -284,7 +284,7 @@
     gap: 8px; margin-top: 1rem;
     transition: background 0.2s;
 }
-.modal-btn-primary:hover { background: #155a30; }
+.modal-btn-primary:hover { background: #155a30; } */
 </style>
 
 <script>

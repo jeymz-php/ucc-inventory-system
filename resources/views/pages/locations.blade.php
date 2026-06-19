@@ -55,7 +55,7 @@
 <div class="card">
     <div class="card-header">
         <div class="card-title"><i class="ti ti-map-pin"></i> All Locations ({{ $locations->total() }})</div>
-        <button class="btn-table-action green"><i class="ti ti-plus"></i> Add Location</button>
+        <button class="btn-table-action green" onclick="document.getElementById('add-location-modal').classList.add('open');"><i class="ti ti-plus"></i> Add Location</button>
     </div>
 
     <div class="data-table-wrap">
@@ -117,8 +117,17 @@
                     </td>
                     <td>
                         <div class="table-actions">
-                            <button class="table-icon-btn edit" title="Edit"><i class="ti ti-edit"></i></button>
-                            <button class="table-icon-btn archive" title="Archive"><i class="ti ti-archive"></i></button>
+                            <button class="table-icon-btn edit" title="Edit"
+                                    onclick="openEditLocationModal({{ $loc->id }}, '{{ addslashes($loc->location_name) }}', {{ $loc->location_type_id ?? 'null' }}, {{ $loc->campus_id }}, {{ $loc->capacity }}, '{{ addslashes($loc->description) }}')">
+                                <i class="ti ti-edit"></i>
+                            </button>
+                            <form method="POST" action="{{ route('locations.archive', $loc) }}" style="display:inline">
+                                @csrf @method('PATCH')
+                                <button type="submit" class="table-icon-btn {{ $loc->is_active ? 'archive' : 'view' }}" title="{{ $loc->is_active ? 'Archive' : 'Restore' }}"
+                                        onclick="return confirm('{{ $loc->is_active ? 'Archive' : 'Restore' }} this location?')">
+                                    <i class="ti ti-{{ $loc->is_active ? 'archive' : 'archive-off' }}"></i>
+                                </button>
+                            </form>
                         </div>
                     </td>
                 </tr>
@@ -146,9 +155,129 @@
     @endif
 </div>
 
+{{-- ADD LOCATION MODAL --}}
+<div class="modal-overlay" id="add-location-modal">
+    <div class="modal-box-lg" style="max-width:560px;">
+        <div class="modal-header-row">
+            <div class="modal-title-sm"><i class="ti ti-plus"></i> Add New Location</div>
+            <button class="modal-close" onclick="document.getElementById('add-location-modal').classList.remove('open');"><i class="ti ti-x"></i></button>
+        </div>
+        <form method="POST" action="{{ route('locations.store') }}">
+            @csrf
+            <div class="modal-form-group">
+                <div class="modal-label">Room Name *</div>
+                <input type="text" name="location_name" class="modal-input" placeholder="e.g., Computer Laboratory 4" required>
+            </div>
+            <div class="modal-grid">
+                <div class="modal-form-group">
+                    <div class="modal-label">Campus *</div>
+                    <select name="campus_id" class="modal-input add-campus-select" required>
+                        <option value="">-- Select Campus --</option>
+                        @foreach($campuses as $campus)
+                        <option value="{{ $campus->id }}">{{ $campus->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="modal-form-group">
+                    <div class="modal-label">Location Type *</div>
+                    <select name="location_type_id" class="modal-input add-type-select" required>
+                        <option value="">-- Select Campus First --</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-form-group">
+                <div class="modal-label">Capacity</div>
+                <input type="number" name="capacity" class="modal-input" placeholder="0" min="0">
+            </div>
+            <div class="modal-form-group">
+                <div class="modal-label">Description</div>
+                <textarea name="description" class="modal-input" rows="3" style="padding-top:10px; resize:none;" placeholder="Brief description of this room"></textarea>
+            </div>
+            <button type="submit" class="modal-btn-primary"><i class="ti ti-plus"></i> Add Location</button>
+        </form>
+    </div>
+</div>
+
+{{-- EDIT LOCATION MODAL --}}
+<div class="modal-overlay" id="edit-location-modal">
+    <div class="modal-box-lg" style="max-width:560px;">
+        <div class="modal-header-row">
+            <div class="modal-title-sm"><i class="ti ti-edit"></i> Edit Location</div>
+            <button class="modal-close" onclick="document.getElementById('edit-location-modal').classList.remove('open');"><i class="ti ti-x"></i></button>
+        </div>
+        <form method="POST" id="edit-location-form">
+            @csrf @method('PUT')
+            <div class="modal-form-group">
+                <div class="modal-label">Room Name *</div>
+                <input type="text" name="location_name" id="el-name" class="modal-input" required>
+            </div>
+            <div class="modal-grid">
+                <div class="modal-form-group">
+                    <div class="modal-label">Campus *</div>
+                    <select name="campus_id" id="el-campus" class="modal-input edit-campus-select" required>
+                        @foreach($campuses as $campus)
+                        <option value="{{ $campus->id }}">{{ $campus->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="modal-form-group">
+                    <div class="modal-label">Location Type *</div>
+                    <select name="location_type_id" id="el-type" class="modal-input edit-type-select" required>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-form-group">
+                <div class="modal-label">Capacity</div>
+                <input type="number" name="capacity" id="el-capacity" class="modal-input" min="0">
+            </div>
+            <div class="modal-form-group">
+                <div class="modal-label">Description</div>
+                <textarea name="description" id="el-description" class="modal-input" rows="3" style="padding-top:10px; resize:none;"></textarea>
+            </div>
+            <button type="submit" class="modal-btn-primary"><i class="ti ti-device-floppy"></i> Save Changes</button>
+        </form>
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
+<script>
+async function loadTypesByCampus(campusId, selectEl, selectedId = null) {
+    selectEl.innerHTML = '<option value="">Loading...</option>';
+    if (!campusId) {
+        selectEl.innerHTML = '<option value="">-- Select Campus First --</option>';
+        return;
+    }
+    const res  = await fetch(`/inventory/location-type/by-campus?campus_id=${campusId}`);
+    const data = await res.json();
+
+    selectEl.innerHTML = '<option value="">-- Select Location Type --</option>';
+    data.forEach(t => {
+        const selected = String(t.id) === String(selectedId) ? 'selected' : '';
+        selectEl.innerHTML += `<option value="${t.id}" ${selected}>${t.type_name}</option>`;
+    });
+}
+
+document.querySelector('.add-campus-select').addEventListener('change', function() {
+    loadTypesByCampus(this.value, document.querySelector('.add-type-select'));
+});
+
+document.querySelector('.edit-campus-select').addEventListener('change', function() {
+    loadTypesByCampus(this.value, document.querySelector('.edit-type-select'));
+});
+
+function openEditLocationModal(id, name, typeId, campusId, capacity, description) {
+    document.getElementById('el-name').value = name;
+    document.getElementById('el-campus').value = campusId;
+    document.getElementById('el-capacity').value = capacity;
+    document.getElementById('el-description').value = description;
+    document.getElementById('edit-location-form').action = `/locations/${id}`;
+    loadTypesByCampus(campusId, document.querySelector('.edit-type-select'), typeId);
+    document.getElementById('edit-location-modal').classList.add('open');
+}
+</script>
+
 <script>
 let locSearchTimeout;
 document.getElementById('loc-search').addEventListener('input', function() {

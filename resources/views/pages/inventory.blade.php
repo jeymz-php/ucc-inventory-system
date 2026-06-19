@@ -16,7 +16,7 @@
         </div>
     </div>
     <div class="hero-right">
-        <a href="#" class="btn-add"><i class="ti ti-plus"></i> New Category</a>
+        <a href="#" class="btn-add" onclick="event.preventDefault(); document.getElementById('new-category-modal').classList.add('open');"><i class="ti ti-plus"></i> New Category</a>
     </div>
 </div>
 
@@ -81,11 +81,14 @@
 {{-- Location Type Cards --}}
 <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:1.25rem;">
     @forelse($locationTypes as $type)
-    <div class="loc-type-card">
+    <div class="loc-type-card {{ !$type->is_active ? 'card-inactive' : '' }}">
         <div class="loc-type-header" style="background: linear-gradient(135deg, {{ $type->color_primary }}, {{ $type->color_secondary }});">
             <div class="loc-type-icon"><i class="fa {{ $type->icon_class }}"></i></div>
             <div class="loc-type-name">{{ $type->type_name }}</div>
             <div class="loc-type-desc">{{ Str::limit($type->description, 90) }}</div>
+            @if(!$type->is_active)
+            <span class="inactive-flag"><i class="ti ti-eye-off"></i> Inactive</span>
+            @endif
         </div>
         <div class="loc-type-body">
             <div class="loc-type-stats">
@@ -100,9 +103,31 @@
             </div>
             <div class="loc-type-footer">
                 <span class="loc-type-chip"><i class="ti ti-map-pin" style="font-size:11px"></i> {{ $type->type_code }}</span>
-                <a href="{{ route('inventory.show', $type) }}" class="btn-manage">
-                    Manage <i class="ti ti-arrow-right"></i>
-                </a>
+                <div style="display:flex; gap:6px;">
+                    <button class="table-icon-btn edit" title="Edit"
+                            onclick="openEditCategoryModal({{ $type->id }}, '{{ addslashes($type->type_name) }}', '{{ addslashes($type->type_code) }}', {{ $type->campus_id }}, '{{ addslashes($type->description) }}', '{{ $type->icon_class }}')">
+                        <i class="ti ti-edit"></i>
+                    </button>
+                    <form method="POST" action="{{ route('inventory.location-type.toggle', $type) }}" style="display:inline">
+                        @csrf @method('PATCH')
+                        <button type="submit" class="table-icon-btn {{ $type->is_active ? 'archive' : 'view' }}" title="{{ $type->is_active ? 'Deactivate' : 'Activate' }}"
+                                onclick="return confirm('{{ $type->is_active ? 'Deactivate' : 'Activate' }} this category?')">
+                            <i class="ti ti-{{ $type->is_active ? 'eye-off' : 'eye' }}"></i>
+                        </button>
+                    </form>
+                    @if($type->locations_count == 0)
+                    <form method="POST" action="{{ route('inventory.location-type.destroy', $type) }}" style="display:inline">
+                        @csrf @method('DELETE')
+                        <button type="submit" class="table-icon-btn delete" title="Delete"
+                                onclick="return confirm('Permanently delete this category? This cannot be undone.')">
+                            <i class="ti ti-trash"></i>
+                        </button>
+                    </form>
+                    @endif
+                    <a href="{{ route('inventory.show', $type) }}" class="btn-manage">
+                        Manage <i class="ti ti-arrow-right"></i>
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -115,6 +140,107 @@
     </div>
     @endforelse
 </div>
+
+<div class="modal-overlay" id="new-category-modal">
+    <div class="modal-box-lg" style="max-width:520px;">
+        <div class="modal-header-row">
+            <div class="modal-title-sm"><i class="ti ti-stack-2"></i> New Location Type / Category</div>
+            <button class="modal-close" onclick="document.getElementById('new-category-modal').classList.remove('open');"><i class="ti ti-x"></i></button>
+        </div>
+
+        <form method="POST" action="{{ route('inventory.location-type.store') }}">
+            @csrf
+            <div class="modal-form-group">
+                <div class="modal-label">Category / Floor Name *</div>
+                <input type="text" name="type_name" class="modal-input" placeholder="e.g., Admin Building" required>
+            </div>
+            <div class="modal-form-group">
+                <div class="modal-label">Floor / Code *</div>
+                <input type="text" name="type_code" class="modal-input" placeholder="e.g., Ground Floor" required>
+            </div>
+            <div class="modal-form-group">
+                <div class="modal-label">Campus *</div>
+                <select name="campus_id" class="modal-input" required>
+                    <option value="">-- Select Campus --</option>
+                    @foreach($campuses as $campus)
+                    <option value="{{ $campus->id }}">{{ $campus->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="modal-form-group">
+                <div class="modal-label">Description</div>
+                <textarea name="description" class="modal-input" rows="3" style="padding-top:10px; resize:none;" placeholder="Brief description of this category/floor"></textarea>
+            </div>
+            <div class="modal-form-group">
+                <div class="modal-label">Icon</div>
+                <select name="icon_class" class="modal-input">
+                    <option value="fa-building">Building</option>
+                    <option value="fa-briefcase">Briefcase (Admin/Office)</option>
+                    <option value="fa-desktop">Desktop (Tech/Computer)</option>
+                    <option value="fa-flask">Flask (Lab/Science)</option>
+                    <option value="fa-chalkboard-teacher">Chalkboard (Academic)</option>
+                </select>
+            </div>
+            <button type="submit" class="modal-btn-primary"><i class="ti ti-plus"></i> Create Category</button>
+        </form>
+    </div>
+</div>
+
+<div class="modal-overlay" id="edit-category-modal">
+    <div class="modal-box-lg" style="max-width:520px;">
+        <div class="modal-header-row">
+            <div class="modal-title-sm"><i class="ti ti-edit"></i> Edit Category</div>
+            <button class="modal-close" onclick="document.getElementById('edit-category-modal').classList.remove('open');"><i class="ti ti-x"></i></button>
+        </div>
+
+        <form method="POST" id="edit-category-form">
+            @csrf @method('PUT')
+            <div class="modal-form-group">
+                <div class="modal-label">Category / Floor Name *</div>
+                <input type="text" name="type_name" id="ec-name" class="modal-input" required>
+            </div>
+            <div class="modal-form-group">
+                <div class="modal-label">Floor / Code *</div>
+                <input type="text" name="type_code" id="ec-code" class="modal-input" required>
+            </div>
+            <div class="modal-form-group">
+                <div class="modal-label">Campus *</div>
+                <select name="campus_id" id="ec-campus" class="modal-input" required>
+                    @foreach($campuses as $campus)
+                    <option value="{{ $campus->id }}">{{ $campus->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="modal-form-group">
+                <div class="modal-label">Description</div>
+                <textarea name="description" id="ec-description" class="modal-input" rows="3" style="padding-top:10px; resize:none;"></textarea>
+            </div>
+            <div class="modal-form-group">
+                <div class="modal-label">Icon</div>
+                <select name="icon_class" id="ec-icon" class="modal-input">
+                    <option value="fa-building">Building</option>
+                    <option value="fa-briefcase">Briefcase (Admin/Office)</option>
+                    <option value="fa-desktop">Desktop (Tech/Computer)</option>
+                    <option value="fa-flask">Flask (Lab/Science)</option>
+                    <option value="fa-chalkboard-teacher">Chalkboard (Academic)</option>
+                </select>
+            </div>
+            <button type="submit" class="modal-btn-primary"><i class="ti ti-device-floppy"></i> Save Changes</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.card-inactive { opacity: 0.6; }
+.inactive-flag {
+    position: absolute; top: 10px; right: 10px;
+    background: rgba(0,0,0,0.4); color: #fff;
+    font-size: 10px; font-weight: 600;
+    padding: 3px 8px; border-radius: 12px;
+    display: flex; align-items: center; gap: 4px;
+}
+.loc-type-header { position: relative; }
+</style>
 
 <style>
 .loc-type-card {
@@ -163,6 +289,18 @@
 @endsection
 
 @push('scripts')
+<script>
+function openEditCategoryModal(id, name, code, campusId, description, icon) {
+    document.getElementById('ec-name').value = name;
+    document.getElementById('ec-code').value = code;
+    document.getElementById('ec-campus').value = campusId;
+    document.getElementById('ec-description').value = description;
+    document.getElementById('ec-icon').value = icon;
+    document.getElementById('edit-category-form').action = `/inventory/location-type/${id}`;
+    document.getElementById('edit-category-modal').classList.add('open');
+}
+</script>
+
 <script>
 // Auto-submit search with debounce
 let searchTimeout;

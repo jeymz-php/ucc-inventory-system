@@ -12,6 +12,9 @@ use App\Http\Controllers\LocationsController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PasswordChangeController;
 use App\Http\Controllers\EquipmentController;
+use App\Http\Controllers\EquipmentArticleController;
+use App\Http\Controllers\EquipmentStoreController;
+use App\Http\Controllers\EquipmentActionController;
 
 // ──────────────────────────────────────────────
 // Landing page
@@ -66,14 +69,43 @@ Route::middleware(['auth', 'role:admin,superadmin'])->group(function () {
 
     Route::get('/inventory',                [InventoryController::class, 'index'])->name('inventory');
     Route::get('/inventory/{locationType}', [InventoryController::class, 'show'])->name('inventory.show');
+    Route::post('/inventory/location-type', [InventoryController::class, 'storeLocationType'])->name('inventory.location-type.store');
+    Route::put('/inventory/location-type/{locationType}',          [InventoryController::class, 'updateLocationType'])->name('inventory.location-type.update');
+    Route::patch('/inventory/location-type/{locationType}/toggle',  [InventoryController::class, 'toggleLocationType'])->name('inventory.location-type.toggle');
+    Route::delete('/inventory/location-type/{locationType}',        [InventoryController::class, 'destroyLocationType'])->name('inventory.location-type.destroy');
+    Route::get('/inventory/location-type/by-campus', [InventoryController::class, 'locationTypesByCampus'])->name('inventory.location-type.by-campus');
 
     Route::get('/locations', [LocationsController::class, 'index'])->name('locations');
+    Route::get('/locations/{location}/equipment', [InventoryController::class, 'showLocation'])->name('locations.equipment');
+    Route::post('/locations',                [LocationsController::class, 'store'])->name('locations.store');
+    Route::put('/locations/{location}',      [LocationsController::class, 'update'])->name('locations.update');
+    Route::patch('/locations/{location}/archive', [LocationsController::class, 'archive'])->name('locations.archive');
 
     Route::get('/equipment', [EquipmentController::class, 'index'])->name('equipment');
     Route::get('/categories',  fn() => view('pages.categories'))->name('categories');
     Route::get('/consumables', fn() => view('pages.consumables'))->name('consumables');
     Route::get('/history',     fn() => view('pages.history'))->name('history');
     Route::get('/condemned',   fn() => view('pages.condemned'))->name('condemned');
+
+    Route::get('/equipment-articles',           [EquipmentArticleController::class, 'index'])->name('equipment.articles.index');
+    Route::post('/equipment-articles',          [EquipmentArticleController::class, 'store'])->name('equipment.articles.store');
+    Route::put('/equipment-articles/{article}', [EquipmentArticleController::class, 'update'])->name('equipment.articles.update');
+    Route::delete('/equipment-articles/{article}', [EquipmentArticleController::class, 'destroy'])->name('equipment.articles.destroy');
+
+    Route::get('/equipment/locations-by-campus', [EquipmentStoreController::class, 'locationsByCampus'])->name('equipment.locations-by-campus');
+
+    Route::post('/equipment/computer', [EquipmentStoreController::class, 'storeComputer'])->name('equipment.store.computer');
+    Route::post('/equipment/kitchen',  [EquipmentStoreController::class, 'storeKitchen'])->name('equipment.store.kitchen');
+    Route::post('/equipment/office',   [EquipmentStoreController::class, 'storeOffice'])->name('equipment.store.office');
+    Route::post('/equipment/lab',      [EquipmentStoreController::class, 'storeLab'])->name('equipment.store.lab');
+    Route::post('/equipment/general',  [EquipmentStoreController::class, 'storeGeneral'])->name('equipment.store.general');
+
+    Route::get('/equipment/{type}/{id}',                [EquipmentActionController::class, 'show'])->name('equipment.show');
+    Route::get('/equipment/{type}/{id}/edit',            [EquipmentActionController::class, 'edit'])->name('equipment.edit');
+    Route::put('/equipment/{type}/{id}',                 [EquipmentActionController::class, 'update'])->name('equipment.update');
+    Route::post('/equipment/{type}/{id}/condemn',        [EquipmentActionController::class, 'condemn'])->name('equipment.condemn');
+    Route::get('/equipment/{type}/{id}/report',          [EquipmentActionController::class, 'report'])->name('equipment.report');
+    Route::delete('/equipment/{type}/{id}',              [EquipmentActionController::class, 'destroy'])->name('equipment.destroy');
 
     Route::get('/users',                  [UserManagementController::class, 'index'])->name('users');
     Route::post('/users',                 [UserManagementController::class, 'store'])->name('users.store');

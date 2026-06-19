@@ -90,8 +90,8 @@
         </div>
     </div>
 
-    <div style="overflow-x:auto;">
-        <table class="users-table">
+    <div class="data-table-wrap">
+        <table class="data-table">
             <thead>
                 <tr>
                     <th>Type</th>

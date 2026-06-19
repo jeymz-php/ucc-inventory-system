@@ -26,3 +26,17 @@ June 18, 2026 - Part I
 - Locations page for Admin/Super Admin improved the Pagination UI
 - All Equipment page implemented, minimal UI
 - Tables like Computer/General/Kitchen/Laboratory/Office Equipment are added, seed anytime
+
+June 19, 2026
+
+- All Equipment page modified, functional everything, just like the originated UCC - IMS, including the following:
+1. Can edit Equipment Item
+2. Can delete Equipment Item with confirmation
+3. Can manual condemnation Equipment Item
+4. Can generate selected Equipment Item with report, improved PDF output
+5. Can view Equipment Item, improved UI
+6. Can add Equipment Item, same functions as originated UCC - IMS, now with the Articles can manage in one page
+- Locations page modified, Add/Edit/Archive Location functional
+- Inventory Page modified and updated, New Category functional, can Edit/Show/Hide the Offices/Departments
+- inside the Offices/Departments, Rooms modified, can now see the Equipment Items on the rooms
+- Equipment Articles added on database structure, can seed anytime

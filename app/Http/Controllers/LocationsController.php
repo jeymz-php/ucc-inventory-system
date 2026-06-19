@@ -33,4 +33,49 @@ class LocationsController extends Controller
 
         return view('pages.locations', compact('locations', 'campuses', 'locationTypes', 'search', 'campusId', 'typeId'));
     }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'location_name'    => 'required|string|max:150',
+            'location_type_id' => 'required|exists:location_types,id',
+            'campus_id'        => 'required|exists:campuses,id',
+            'capacity'         => 'nullable|integer|min:0',
+            'description'      => 'nullable|string',
+        ]);
+
+        \App\Models\Location::create([
+            'location_name'    => $request->location_name,
+            'location_type_id' => $request->location_type_id,
+            'campus_id'        => $request->campus_id,
+            'capacity'         => $request->capacity ?? 0,
+            'description'      => $request->description,
+            'is_active'        => true,
+        ]);
+
+        return back()->with('success', 'New location added successfully.');
+    }
+
+    public function update(Request $request, \App\Models\Location $location)
+    {
+        $request->validate([
+            'location_name'    => 'required|string|max:150',
+            'location_type_id' => 'required|exists:location_types,id',
+            'campus_id'        => 'required|exists:campuses,id',
+            'capacity'         => 'nullable|integer|min:0',
+            'description'      => 'nullable|string',
+        ]);
+
+        $location->update($request->only(['location_name', 'location_type_id', 'campus_id', 'capacity', 'description']));
+
+        return back()->with('success', 'Location updated successfully.');
+    }
+
+    public function archive(\App\Models\Location $location)
+    {
+        $location->update(['is_active' => !$location->is_active]);
+        $status = $location->is_active ? 'restored' : 'archived';
+
+        return back()->with('success', "Location {$status} successfully.");
+    }
 }

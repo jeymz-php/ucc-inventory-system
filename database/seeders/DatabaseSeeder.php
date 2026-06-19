@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
             SystemStatusSeeder::class,
             LocationTypeSeeder::class,
             LocationSeeder::class,
+            EquipmentArticleSeeder::class,
         ]);
     }
 }

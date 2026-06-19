@@ -68,9 +68,9 @@
                     </td>
                     <td>
                         <div class="table-actions">
-                            <button class="table-icon-btn view" title="View Equipment">
+                            <a href="{{ route('locations.equipment', $loc) }}" class="table-icon-btn view" title="View Equipment">
                                 <i class="ti ti-eye"></i>
-                            </button>
+                            </a>
                         </div>
                     </td>
                 </tr>
