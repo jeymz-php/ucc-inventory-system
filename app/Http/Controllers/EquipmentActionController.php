@@ -96,6 +96,8 @@ class EquipmentActionController extends Controller
 
         $item->update($data);
 
+        \App\Models\ActivityLog::record('update', 'Equipment', "Updated equipment: {$this->displayName($item, $type)}", $type, $item->id);
+
         return redirect()->route('equipment.show', [$type, $id])->with('success', 'Equipment updated successfully.');
     }
 
@@ -114,6 +116,8 @@ class EquipmentActionController extends Controller
             'condemned_by'     => auth()->id(),
             'status'           => $type === 'computer' ? 'retired' : 'condemned',
         ]);
+
+        \App\Models\ActivityLog::record('condemn', 'Equipment', "Condemned equipment: {$this->displayName($item, $type)}" . ($request->condemned_reason ? " — Reason: {$request->condemned_reason}" : ''), $type, $item->id);
 
         return back()->with('success', 'Equipment has been marked as condemned.');
     }
@@ -134,6 +138,8 @@ class EquipmentActionController extends Controller
 
         $item->delete();
 
+        \App\Models\ActivityLog::record('delete', 'Equipment', "Permanently deleted equipment: {$name}", $type, $id);
+
         return redirect()->route('equipment')->with('success', "\"{$name}\" has been permanently deleted.");
     }
 
@@ -152,5 +158,54 @@ class EquipmentActionController extends Controller
         $pdf = \PDF::loadView('pdf.equipment_report', compact('item', 'type', 'name', 'logoBase64'));
 
         return $pdf->stream('Equipment-Report-' . str_replace(' ', '-', $name) . '.pdf');
+    }
+
+    public function restore(string $type, int $id)
+    {
+        $item = $this->resolveModel($type, $id);
+
+        if ($item->is_wasted) {
+            return back()->with('error', 'This item has been transferred to waste and cannot be restored.');
+        }
+
+        $item->update([
+            'is_condemned'     => false,
+            'condemned_date'   => null,
+            'condemned_reason' => null,
+            'condemned_by'     => null,
+            'status'           => $item->location_id ? 'assigned' : 'available',
+        ]);
+
+        \App\Models\ActivityLog::record(
+            'restore', 'Equipment',
+            "Restored equipment from condemned: {$this->displayName($item, $type)}",
+            $type, $item->id
+        );
+
+        return back()->with('success', 'Equipment has been restored and returned to active inventory.');
+    }
+
+    public function transferToWaste(Request $request, string $type, int $id)
+    {
+        $item = $this->resolveModel($type, $id);
+
+        if (!$item->is_condemned) {
+            return back()->with('error', 'Only condemned items can be transferred to waste.');
+        }
+
+        $item->update([
+            'is_wasted'   => true,
+            'wasted_date' => now(),
+            'wasted_by'   => auth()->id(),
+            'status'      => 'retired',
+        ]);
+
+        \App\Models\ActivityLog::record(
+            'waste', 'Equipment',
+            "Transferred to waste (permanent): {$this->displayName($item, $type)}",
+            $type, $item->id
+        );
+
+        return back()->with('success', 'Equipment has been permanently transferred to waste.');
     }
 }

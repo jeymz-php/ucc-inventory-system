@@ -15,6 +15,9 @@ use App\Http\Controllers\EquipmentController;
 use App\Http\Controllers\EquipmentArticleController;
 use App\Http\Controllers\EquipmentStoreController;
 use App\Http\Controllers\EquipmentActionController;
+use App\Http\Controllers\HistoryController;
+use App\Http\Controllers\CondemnedController;
+use App\Http\Controllers\CondemnedStoreController;
 
 // ──────────────────────────────────────────────
 // Landing page
@@ -84,8 +87,8 @@ Route::middleware(['auth', 'role:admin,superadmin'])->group(function () {
     Route::get('/equipment', [EquipmentController::class, 'index'])->name('equipment');
     Route::get('/categories',  fn() => view('pages.categories'))->name('categories');
     Route::get('/consumables', fn() => view('pages.consumables'))->name('consumables');
-    Route::get('/history',     fn() => view('pages.history'))->name('history');
-    Route::get('/condemned',   fn() => view('pages.condemned'))->name('condemned');
+    Route::get('/history', [HistoryController::class, 'index'])->name('history');
+    Route::get('/condemned', [CondemnedController::class, 'index'])->name('condemned');
 
     Route::get('/equipment-articles',           [EquipmentArticleController::class, 'index'])->name('equipment.articles.index');
     Route::post('/equipment-articles',          [EquipmentArticleController::class, 'store'])->name('equipment.articles.store');
@@ -106,6 +109,10 @@ Route::middleware(['auth', 'role:admin,superadmin'])->group(function () {
     Route::post('/equipment/{type}/{id}/condemn',        [EquipmentActionController::class, 'condemn'])->name('equipment.condemn');
     Route::get('/equipment/{type}/{id}/report',          [EquipmentActionController::class, 'report'])->name('equipment.report');
     Route::delete('/equipment/{type}/{id}',              [EquipmentActionController::class, 'destroy'])->name('equipment.destroy');
+    Route::post('/equipment/{type}/{id}/restore', [EquipmentActionController::class, 'restore'])->name('equipment.restore');
+    Route::post('/equipment/{type}/{id}/waste',   [EquipmentActionController::class, 'transferToWaste'])->name('equipment.waste');
+
+    Route::post('/condemned', [CondemnedStoreController::class, 'store'])->name('condemned.store');
 
     Route::get('/users',                  [UserManagementController::class, 'index'])->name('users');
     Route::post('/users',                 [UserManagementController::class, 'store'])->name('users.store');

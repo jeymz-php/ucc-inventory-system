@@ -28,15 +28,35 @@ class InventoryController extends Controller
             ->when($campusId, fn($q) => $q->where('campus_id', $campusId))
             ->when($search, fn($q) => $q->where('type_name', 'like', "%$search%"));
 
-        $locationTypes = $query->get()->map(function ($type) {
-            $type->equipment_count = Equipment::whereIn('location_id', $type->locations()->pluck('id'))->count();
-            return $type;
-        });
+        $locationTypes = $query->get();
+
+        $models = [
+            \App\Models\ComputerInventory::class,
+            \App\Models\KitchenEquipment::class,
+            \App\Models\OfficeEquipment::class,
+            \App\Models\LabEquipment::class,
+            \App\Models\GeneralEquipment::class,
+        ];
+
+        foreach ($locationTypes as $type) {
+            $locationIds = $type->locations()->pluck('id');
+
+            $count = 0;
+            foreach ($models as $modelClass) {
+                $count += $modelClass::whereIn('location_id', $locationIds)->count();
+            }
+            $type->equipment_count = $count;
+        }
+
+        $totalEquipment = 0;
+        foreach ($models as $modelClass) {
+            $totalEquipment += $modelClass::count();
+        }
 
         $stats = [
             'categories' => LocationType::count(),
             'rooms'      => Location::count(),
-            'equipment'  => Equipment::count(),
+            'equipment'  => $totalEquipment,
         ];
 
         return view('pages.inventory', compact('locationTypes', 'campuses', 'stats', 'campusId', 'search'));
@@ -111,6 +131,8 @@ class InventoryController extends Controller
             'is_active'       => true,
         ]);
 
+        \App\Models\ActivityLog::record('create', 'Category', "Added new category: {$request->type_name}", 'location_type', null);
+
         return back()->with('success', 'New category added successfully.');
     }
 
@@ -126,6 +148,8 @@ class InventoryController extends Controller
 
         $locationType->update($request->only(['type_name', 'type_code', 'campus_id', 'description', 'icon_class']));
 
+        \App\Models\ActivityLog::record('update', 'Category', "Updated category: {$locationType->type_name}", 'location_type', $locationType->id);
+
         return back()->with('success', 'Category updated successfully.');
     }
 
@@ -133,6 +157,8 @@ class InventoryController extends Controller
     {
         $locationType->update(['is_active' => !$locationType->is_active]);
         $status = $locationType->is_active ? 'activated' : 'deactivated';
+
+        \App\Models\ActivityLog::record($locationType->is_active ? 'activate' : 'deactivate', 'Category', "{$status} category: {$locationType->type_name}", 'location_type', $locationType->id);
 
         return back()->with('success', "Category {$status} successfully.");
     }
@@ -144,6 +170,8 @@ class InventoryController extends Controller
         }
 
         $locationType->delete();
+
+        \App\Models\ActivityLog::record('delete', 'Category', "Deleted category: {$locationType->type_name}", 'location_type', $locationType->id);
 
         return back()->with('success', 'Category removed successfully.');
     }

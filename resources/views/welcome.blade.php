@@ -254,6 +254,56 @@
             margin-top: 2rem;
         }
 
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 300;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .modal-overlay.open { display: flex; }
+
+        .modal-box-lg {
+            background: #fff;
+            border-radius: 14px;
+            padding: 1.5rem;
+            width: 100%;
+            max-width: 640px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.18);
+        }
+
+        .modal-header-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.25rem;
+        }
+        .modal-title-sm {
+            font-size: 16px;
+            font-weight: 700;
+            color: #111;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .modal-title-sm i { color: #1a6b3a; }
+        .modal-close {
+            width: 28px; height: 28px;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+            background: #fff;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            color: #999;
+            font-size: 14px;
+        }
+        .modal-close:hover { background: #fff5f5; color: #e24b4a; border-color: #e24b4a; }
+
         /* ── RESPONSIVE ── */
         @media (max-width: 640px) {
             .landing-wrap { flex-direction: column; height: auto; }
@@ -336,6 +386,8 @@
 
     </div>
 </div>
+
+@include('partials.developer_modal')
 
 </body>
 </html>

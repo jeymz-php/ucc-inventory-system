@@ -58,11 +58,6 @@
             <i class="ti ti-map-pin"></i> Locations
         </a>
 
-        <a href="{{ route('categories') }}"
-           class="nav-item {{ request()->routeIs('categories') ? 'active' : '' }}">
-            <i class="ti ti-tag"></i> Categories
-        </a>
-
         <div class="nav-section-label">Management</div>
 
         <a href="{{ route('consumables') }}"

@@ -53,6 +53,8 @@ class LocationsController extends Controller
             'is_active'        => true,
         ]);
 
+        \App\Models\ActivityLog::record('create', 'Location', "Added new room: {$request->location_name}", 'location', null);
+
         return back()->with('success', 'New location added successfully.');
     }
 
@@ -68,6 +70,8 @@ class LocationsController extends Controller
 
         $location->update($request->only(['location_name', 'location_type_id', 'campus_id', 'capacity', 'description']));
 
+        \App\Models\ActivityLog::record('update', 'Location', "Updated room: {$location->location_name}", 'location', $location->id);
+
         return back()->with('success', 'Location updated successfully.');
     }
 
@@ -75,6 +79,8 @@ class LocationsController extends Controller
     {
         $location->update(['is_active' => !$location->is_active]);
         $status = $location->is_active ? 'restored' : 'archived';
+
+        \App\Models\ActivityLog::record($location->is_active ? 'restore' : 'archive', 'Location', "{$status} room: {$location->location_name}", 'location', $location->id);
 
         return back()->with('success', "Location {$status} successfully.");
     }

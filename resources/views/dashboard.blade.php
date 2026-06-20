@@ -118,7 +118,7 @@
     <div class="stat-card">
         <div class="stat-icon red"><i class="ti ti-user-check"></i></div>
         <div>
-            <div class="stat-value">—</div>
+            <div class="stat-value">{{ $stats['my_equipment'] }}</div>
             <div class="stat-label">Assigned to Me</div>
             <div class="stat-sub"><i class="ti ti-package" style="font-size:11px"></i> Equipment items</div>
         </div>
@@ -141,10 +141,23 @@
             </a>
         </div>
         <div class="card-body">
+            @forelse($recentActivity as $log)
+            <div class="activity-item">
+                <div class="activity-dot dot-{{ $log->action === 'delete' ? 'red' : ($log->action === 'condemn' || $log->action === 'archive' ? 'orange' : 'green') }}"></div>
+                <div>
+                    <div class="activity-title">{{ $log->description }}</div>
+                    <div class="activity-meta">
+                        <span>{{ $log->user->name ?? 'System' }}</span>
+                        <span>{{ $log->created_at->diffForHumans() }}</span>
+                    </div>
+                </div>
+            </div>
+            @empty
             <div class="empty-state">
                 <i class="ti ti-clipboard-list"></i>
                 <p>No recent activity yet.<br>Activity will appear once equipment is assigned.</p>
             </div>
+            @endforelse
         </div>
     </div>
 
@@ -158,12 +171,37 @@
                     <i class="ti ti-chart-pie"></i> System Overview
                 @endif
             </div>
+            @if($role === 'superadmin')
+            <a href="{{ route('condemned') }}" style="font-size:12px; color:var(--green-dark); text-decoration:none; font-weight:600;">
+                View All →
+            </a>
+            @endif
         </div>
         <div class="card-body">
-            <div class="empty-state">
-                <i class="ti ti-{{ $role === 'superadmin' ? 'alert-triangle' : 'chart-bar' }}"></i>
-                <p>Data will populate once inventory is set up.</p>
-            </div>
+            @if($role === 'superadmin')
+                @forelse($recentCondemned as $item)
+                <div class="activity-item">
+                    <div class="activity-dot dot-red"></div>
+                    <div>
+                        <div class="activity-title">{{ $item->display_name ?? $item->equipment_name ?? $item->article ?? 'Equipment' }}</div>
+                        <div class="activity-meta">
+                            <span>{{ $item->condemnedByUser->name ?? '—' }}</span>
+                            <span>{{ $item->condemned_date?->diffForHumans() }}</span>
+                        </div>
+                    </div>
+                </div>
+                @empty
+                <div class="empty-state">
+                    <i class="ti ti-circle-check" style="color:var(--green-dark)"></i>
+                    <p>No condemned equipment. Everything is in good standing!</p>
+                </div>
+                @endforelse
+            @else
+                <div class="empty-state">
+                    <i class="ti ti-chart-bar"></i>
+                    <p>System metrics will appear here as inventory data grows.</p>
+                </div>
+            @endif
         </div>
     </div>
 

@@ -40,3 +40,12 @@ June 19, 2026
 - Inventory Page modified and updated, New Category functional, can Edit/Show/Hide the Offices/Departments
 - inside the Offices/Departments, Rooms modified, can now see the Equipment Items on the rooms
 - Equipment Articles added on database structure, can seed anytime
+
+June 20, 2026
+
+- Categories in sidebar removed (functions of Categories already have in the Inventory page)
+- History page implemented, upgraded with all logs in the IMS
+- Condemned page implemented, same functions as the originated UCC - IMS
+- Inventory page updated, with all counts are dynamic
+- Dashboard page updated, with all analytics reports and logs are dynamic
+- On the homepage and login page, developers added to recognize the developers team of UCC - IMS

@@ -78,17 +78,35 @@ class EquipmentStoreController extends Controller
             'status'                   => $request->location_id ? 'assigned' : 'available',
         ]);
 
+        \App\Models\ActivityLog::record(
+            'create', 'Equipment',
+            "Added computer equipment: {$request->description}",
+            'computer_inventory', null
+        );
+
         return back()->with('success', 'Computer equipment added to inventory.');
     }
 
     public function storeKitchen(Request $request)
     {
+        \App\Models\ActivityLog::record(
+            'create', 'Equipment',
+            "Added kitchen equipment: {$request->equipment_name}",
+            'kitchen_equipment', null
+        );
+
         $this->storeGeneric(KitchenEquipment::class, $request, 'equipment_name');
         return back()->with('success', 'Kitchen equipment added to inventory.');
     }
 
     public function storeOffice(Request $request)
     {
+        \App\Models\ActivityLog::record(
+            'create', 'Equipment',
+            "Added office equipment: {$request->equipment_name}",
+            'office_equipment', null
+        );
+
         $this->storeGeneric(OfficeEquipment::class, $request, 'equipment_name');
         return back()->with('success', 'Office equipment added to inventory.');
     }
@@ -121,6 +139,12 @@ class EquipmentStoreController extends Controller
             'status'               => $request->location_id ? 'assigned' : 'available',
         ]);
 
+        \App\Models\ActivityLog::record(
+            'create', 'Equipment',
+            "Added laboratory equipment: {$request->article}",
+            'laboratory_equipment', null
+        );
+
         return back()->with('success', 'Laboratory equipment added to inventory.');
     }
 
@@ -150,6 +174,12 @@ class EquipmentStoreController extends Controller
             'cost'              => $request->cost ?? 0,
             'status'            => $request->location_id ? 'assigned' : 'available',
         ]);
+
+        \App\Models\ActivityLog::record(
+            'create', 'Equipment',
+            "Added general equipment: {$request->article}",
+            'general_equipment', null
+        );
 
         return back()->with('success', 'General equipment added to inventory.');
     }

@@ -411,6 +411,49 @@
         ::-webkit-scrollbar-thumb { background: #c5d5ca; border-radius: 4px; }
 
         /* ══════════════════════════════════════
+        FILTER PILLS (shared across pages)
+        ══════════════════════════════════════ */
+        .filter-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .filter-pills {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .filter-pill {
+            padding: 7px 16px;
+            border-radius: 20px;
+            border: 1.5px solid var(--border);
+            background: #fff;
+            color: var(--text-secondary);
+            font-size: 12.5px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .filter-pill:hover {
+            border-color: var(--green-dark);
+            color: var(--green-dark);
+        }
+
+        .filter-pill.active {
+            background: var(--green-dark);
+            border-color: var(--green-dark);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        /* ══════════════════════════════════════
         GLOBAL MODAL SYSTEM
         ══════════════════════════════════════ */
         .modal-overlay {
