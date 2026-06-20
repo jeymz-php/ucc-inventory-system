@@ -9,7 +9,7 @@
         .header-row { display: table; width: 100%; margin-bottom: 14px; }
         .header-logo { display: table-cell; width: 60px; vertical-align: middle; }
         .header-logo img { width: 50px; height: 50px; }
-        .header-text { display: table-cell; vertical-align: middle; padding-left: 12px; }
+        .header-text { display: table-cell; vertical-align: middle; padding-left: 10px; }
         .header-text h1 { font-size: 17px; color: #1a6b3a; margin: 0; }
         .header-text p { font-size: 10.5px; color: #666; margin: 2px 0 0; }
 
@@ -126,6 +126,42 @@
             </table>
         </div>
     </div>
+
+    @if($transferLogs->count() > 0)
+    <div class="section-bar" style="background:#3b82f6;">Transfer History</div>
+    <table class="info-table">
+        <tr>
+            <td class="label" style="width:20%;">Date</td>
+            <td class="value" style="width:80%;">
+                <table style="width:100%;">
+                    <tr>
+                        <td style="width:50%; padding:2px 4px; font-size:10px; color:#888; border:none;">Campus</td>
+                        <td style="width:50%; padding:2px 4px; font-size:10px; color:#888; border:none;">Room / Location</td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        @foreach($transferLogs as $log)
+        @php $meta = $log->meta ?? []; @endphp
+        <tr>
+            <td class="label" style="vertical-align:top;">{{ $log->created_at->format('M d, Y h:i A') }}<br>
+                <span style="font-size:9px; color:#999;">by {{ $log->user->name ?? 'System' }}</span>
+            </td>
+            <td class="value">
+                <div style="margin-bottom:4px;">
+                    <strong>Campus:</strong> {{ $meta['prev_campus'] ?? '—' }} > <strong>{{ $meta['new_campus'] ?? '—' }}</strong>
+                </div>
+                <div style="margin-bottom:4px;">
+                    <strong>Room:</strong> {{ $meta['prev_location'] ?? '—' }} > <strong>{{ $meta['new_location'] ?? '—' }}</strong>
+                </div>
+                <div>
+                    <strong>Accountable Person:</strong> {{ $meta['prev_accountable'] ?? '—' }} > <strong>{{ $meta['new_accountable'] ?? '—' }}</strong>
+                </div>
+            </td>
+        </tr>
+        @endforeach
+    </table>
+    @endif
 
     @if($item->is_condemned)
     <div class="section-bar" style="background:#c0392b;">Condemnation Details</div>

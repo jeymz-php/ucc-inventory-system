@@ -111,6 +111,8 @@ Route::middleware(['auth', 'role:admin,superadmin'])->group(function () {
     Route::delete('/equipment/{type}/{id}',              [EquipmentActionController::class, 'destroy'])->name('equipment.destroy');
     Route::post('/equipment/{type}/{id}/restore', [EquipmentActionController::class, 'restore'])->name('equipment.restore');
     Route::post('/equipment/{type}/{id}/waste',   [EquipmentActionController::class, 'transferToWaste'])->name('equipment.waste');
+    Route::post('/equipment/bulk-transfer', [EquipmentActionController::class, 'bulkTransfer'])->name('equipment.bulk-transfer');
+    Route::get('/equipment/bulk-report',    [EquipmentActionController::class, 'bulkReport'])->name('equipment.report.bulk');
 
     Route::post('/condemned', [CondemnedStoreController::class, 'store'])->name('condemned.store');
 

@@ -16,7 +16,8 @@
         </div>
     </div>
     <div class="hero-right" style="display:flex; gap:8px;">
-        <a href="#" class="btn-add"><i class="ti ti-file-text"></i> Report</a>
+        <a href="#" class="btn-add" onclick="event.preventDefault(); openReportModal();"><i class="ti ti-file-text"></i> Report</a>
+        <a href="#" class="btn-add" id="transfer-btn" onclick="event.preventDefault(); openTransferModal();" style="opacity:0.5; pointer-events:none;"><i class="ti ti-arrows-exchange"></i> Transfer</a>
         <a href="#" class="btn-add" onclick="event.preventDefault(); openCategoryModal();"><i class="ti ti-plus"></i> Add Equipment</a>
     </div>
 </div>
@@ -104,6 +105,7 @@
         <table class="data-table">
             <thead>
                 <tr>
+                    <th style="width:36px;"><input type="checkbox" id="select-all-equip"></th>
                     <th>Equipment</th>
                     <th>Type</th>
                     <th>Serial / Property No.</th>
@@ -117,6 +119,13 @@
             <tbody>
                 @forelse($paginator as $item)
                 <tr>
+                    <td>
+                        <input type="checkbox" class="equip-row-checkbox"
+                            value="{{ strtolower($item->equipment_type) }}:{{ $item->id }}"
+                            data-name="{{ addslashes($item->display_name) }}"
+                            data-campus="{{ $item->campus->name ?? '—' }}"
+                            data-accountable="{{ $item->remarks ?? '—' }}">
+                    </td>
                     <td>
                         <div class="cell-primary">{{ $item->display_name ?? '—' }}</div>
                         @if($item->brand)
@@ -500,6 +509,134 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="transfer-modal">
+    <div class="modal-box-lg" style="max-width:620px;">
+        <div class="modal-header-row" style="background:#ef9f27; margin:-1.5rem -1.5rem 1.25rem; padding:1.1rem 1.5rem; border-radius:14px 14px 0 0;">
+            <div class="modal-title-sm" style="color:#fff;"><i class="ti ti-arrows-exchange"></i> Transfer Inventory</div>
+            <button class="modal-close" onclick="closeTransferModal()"><i class="ti ti-x"></i></button>
+        </div>
+
+        <div class="transfer-section-label">Selected Items (<span id="transfer-count">0</span>)</div>
+        <div class="transfer-items-box" id="transfer-items-list"></div>
+
+        <form method="POST" action="{{ route('equipment.bulk-transfer') }}" id="transfer-form">
+            @csrf
+            <input type="hidden" name="items" id="transfer-items-input">
+
+            <div class="modal-grid" style="margin-top:1rem;">
+                <div class="modal-form-group">
+                    <div class="modal-label">Transfer to Campus *</div>
+                    <select name="campus_id" class="modal-input transfer-campus-select" required>
+                        <option value="">-- Select Destination --</option>
+                        @foreach($campuses as $campus)
+                        <option value="{{ $campus->id }}">{{ $campus->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="modal-form-group">
+                    <div class="modal-label">Assign New Room <span style="text-transform:none; font-weight:400;">(optional)</span></div>
+                    <select name="location_id" class="modal-input transfer-location-select">
+                        <option value="">-- Unassigned / Storage --</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="modal-form-group">
+                <div class="modal-label">New Accountable Person <span style="text-transform:none; font-weight:400;">(optional)</span></div>
+                <div style="display:flex; gap:6px;">
+                    <input type="text" name="acc_last" class="modal-input" placeholder="Last Name">
+                    <input type="text" name="acc_first" class="modal-input" placeholder="First Name">
+                    <input type="text" name="acc_mi" class="modal-input" placeholder="M.I." style="max-width:60px;">
+                </div>
+                <div class="modal-hint">Leave blank to keep the current accountable person on record.</div>
+            </div>
+
+            <button type="submit" class="modal-btn-primary" style="background:#ef9f27;"><i class="ti ti-arrows-exchange"></i> Execute Transfer</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.transfer-section-label {
+    font-size: 12px; font-weight: 700; color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+.transfer-items-box {
+    border: 1px solid var(--border); border-radius: 10px;
+    max-height: 160px; overflow-y: auto;
+}
+.transfer-item-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 12px; font-size: 12.5px; border-bottom: 1px solid var(--border);
+}
+.transfer-item-row:last-child { border-bottom: none; }
+.transfer-item-name { font-weight: 600; }
+.transfer-item-meta { color: var(--text-muted); font-size: 11.5px; }
+</style>
+
+<div class="modal-overlay" id="report-modal">
+    <div class="modal-box-lg" style="max-width:480px;">
+        <div class="modal-header-row">
+            <div class="modal-title-sm"><i class="ti ti-file-text"></i> Generate Inventory Report</div>
+            <button class="modal-close" onclick="closeReportModal()"><i class="ti ti-x"></i></button>
+        </div>
+
+        <p style="font-size:13px; color:#666; text-align:center; margin-bottom:1.25rem;">
+            Select filters to generate a customized inventory report.
+        </p>
+
+        <form method="GET" action="{{ route('equipment.report.bulk') }}" target="_blank">
+            <div class="modal-form-group">
+                <div class="modal-label">1. Report Type</div>
+                <div style="display:flex; gap:8px;">
+                    <button type="button" class="report-type-btn active" data-value="campus" onclick="selectReportType(this)">
+                        <i class="ti ti-building"></i> By Campus
+                    </button>
+                    <button type="button" class="report-type-btn" data-value="person" onclick="selectReportType(this)">
+                        <i class="ti ti-user"></i> By Person
+                    </button>
+                </div>
+                <input type="hidden" name="report_type" id="report-type-input" value="campus">
+            </div>
+
+            <div class="modal-form-group" id="report-campus-group">
+                <div class="modal-label">2. Select Campus</div>
+                <select name="campus_id" class="modal-input">
+                    <option value="">All Campuses</option>
+                    @foreach($campuses as $campus)
+                    <option value="{{ $campus->id }}">{{ $campus->name }}</option>
+                    @endforeach
+                </select>
+                <div class="modal-hint">Select a specific campus or include all.</div>
+            </div>
+
+            <div class="modal-form-group" id="report-person-group" style="display:none;">
+                <div class="modal-label">2. Select Accountable Person</div>
+                <select name="accountable_person" class="modal-input">
+                    <option value="">All Persons</option>
+                    @foreach($accountablePersons as $person)
+                    <option value="{{ $person }}">{{ $person }}</option>
+                    @endforeach
+                </select>
+                <div class="modal-hint">Select a specific person or include all.</div>
+            </div>
+
+            <button type="submit" class="modal-btn-primary"><i class="ti ti-file-text"></i> Generate Report</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.report-type-btn {
+    flex: 1; padding: 10px; border-radius: 8px;
+    border: 1.5px solid var(--border); background: #fff;
+    color: var(--text-secondary); font-size: 13px; font-weight: 600;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+    font-family: 'Inter', sans-serif; transition: all 0.15s;
+}
+.report-type-btn.active { background: var(--green-dark); border-color: var(--green-dark); color: #fff; }
+</style>
+
 <style>
 .category-grid {
     display: grid; grid-template-columns: repeat(3, 1fr);
@@ -609,6 +746,84 @@
 @endsection
 
 @push('scripts')
+<script>
+// ── CHECKBOX SELECTION ──
+function updateTransferButton() {
+    const checked = document.querySelectorAll('.equip-row-checkbox:checked');
+    const btn = document.getElementById('transfer-btn');
+    if (checked.length > 0) {
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+    } else {
+        btn.style.opacity = '0.5';
+        btn.style.pointerEvents = 'none';
+    }
+}
+
+document.getElementById('select-all-equip')?.addEventListener('change', function() {
+    document.querySelectorAll('.equip-row-checkbox').forEach(cb => cb.checked = this.checked);
+    updateTransferButton();
+});
+
+document.querySelectorAll('.equip-row-checkbox').forEach(cb => {
+    cb.addEventListener('change', updateTransferButton);
+});
+
+// ── TRANSFER MODAL ──
+function openTransferModal() {
+    const checked = document.querySelectorAll('.equip-row-checkbox:checked');
+    if (checked.length === 0) return;
+
+    const items = Array.from(checked).map(cb => cb.value);
+    document.getElementById('transfer-items-input').value = JSON.stringify(items);
+    document.getElementById('transfer-count').textContent = checked.length;
+
+    const list = document.getElementById('transfer-items-list');
+    list.innerHTML = Array.from(checked).map(cb => `
+        <div class="transfer-item-row">
+            <span class="transfer-item-name">${cb.dataset.name}</span>
+            <span class="transfer-item-meta">${cb.dataset.campus} • ${cb.dataset.accountable}</span>
+        </div>
+    `).join('');
+
+    document.getElementById('transfer-modal').classList.add('open');
+}
+function closeTransferModal() {
+    document.getElementById('transfer-modal').classList.remove('open');
+}
+
+document.querySelector('.transfer-campus-select').addEventListener('change', async function() {
+    const campusId = this.value;
+    const locSelect = document.querySelector('.transfer-location-select');
+    locSelect.innerHTML = '<option value="">Loading...</option>';
+    if (!campusId) { locSelect.innerHTML = '<option value="">-- Unassigned / Storage --</option>'; return; }
+
+    const res  = await fetch(`{{ route('equipment.locations-by-campus') }}?campus_id=${campusId}`);
+    const data = await res.json();
+
+    locSelect.innerHTML = '<option value="">-- Unassigned / Storage --</option>';
+    data.forEach(loc => {
+        locSelect.innerHTML += `<option value="${loc.id}">${loc.location_name}</option>`;
+    });
+});
+
+// ── REPORT MODAL ──
+function openReportModal() {
+    document.getElementById('report-modal').classList.add('open');
+}
+function closeReportModal() {
+    document.getElementById('report-modal').classList.remove('open');
+}
+function selectReportType(btn) {
+    document.querySelectorAll('.report-type-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const type = btn.dataset.value;
+    document.getElementById('report-type-input').value = type;
+    document.getElementById('report-campus-group').style.display = type === 'campus' ? 'block' : 'none';
+    document.getElementById('report-person-group').style.display = type === 'person' ? 'block' : 'none';
+}
+</script>
+
 <script>
 // Filter pill clicks
 document.querySelectorAll('.filter-pill').forEach(pill => {

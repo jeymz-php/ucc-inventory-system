@@ -166,61 +166,49 @@
         </div>
     </div>
 
-    {{-- Condition, Location & Assignment --}}
+    {{-- Condition (still editable), Campus/Location/Accountable (locked) --}}
     <div class="card" style="margin-bottom:1.25rem;">
-        <div class="card-header"><div class="card-title"><i class="ti ti-map-pin"></i> Condition, Location &amp; Assignment</div></div>
+        <div class="card-header"><div class="card-title"><i class="ti ti-shield-check"></i> Condition</div></div>
         <div class="card-body">
-
-            <div class="modal-grid">
-                <div class="modal-form-group">
-                    <div class="modal-label">Condition *</div>
-                    <select name="condition_status" class="modal-input" required>
-                        @foreach(['Excellent','Good','Fair','Poor','Damaged'] as $c)
-                        <option value="{{ $c }}" {{ $item->condition_status === $c ? 'selected' : '' }}>{{ $c }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="modal-form-group">
-                    <div class="modal-label">Campus *</div>
-                    <select name="campus_id" class="modal-input campus-select" required>
-                        @foreach($campuses as $campus)
-                        <option value="{{ $campus->id }}" {{ $item->campus_id == $campus->id ? 'selected' : '' }}>{{ $campus->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-            </div>
-
-            <div class="modal-form-group">
-                <div class="modal-label">Location</div>
-                <select name="location_id" class="modal-input location-select">
-                    <option value="">-- Unassigned / Storage --</option>
-                    @foreach($locations as $loc)
-                    <option value="{{ $loc->id }}" {{ $item->location_id == $loc->id ? 'selected' : '' }}>{{ $loc->location_name }}</option>
+            <div class="modal-form-group" style="max-width:300px;">
+                <div class="modal-label">Condition *</div>
+                <select name="condition_status" class="modal-input" required>
+                    @foreach(['Excellent','Good','Fair','Poor','Damaged'] as $c)
+                    <option value="{{ $c }}" {{ $item->condition_status === $c ? 'selected' : '' }}>{{ $c }}</option>
                     @endforeach
                 </select>
             </div>
+        </div>
+    </div>
 
-            @php
-                [$accLast, $accFirstMi] = array_pad(explode(',', $item->remarks ?? '', 2), 2, '');
-                $accFirstMi = trim($accFirstMi);
-                $accMi = '';
-                $accFirst = $accFirstMi;
-                if (preg_match('/^(.*)\s+([A-Za-z])\.?$/', $accFirstMi, $m)) {
-                    $accFirst = trim($m[1]);
-                    $accMi    = $m[2];
-                }
-            @endphp
-
-            <div class="modal-form-group">
-                <div class="modal-label">Accountable Person</div>
-                <div style="display:flex; gap:6px;">
-                    <input type="text" name="acc_last" class="modal-input" placeholder="Last Name" value="{{ trim($accLast) }}">
-                    <input type="text" name="acc_first" class="modal-input" placeholder="First Name" value="{{ $accFirst }}">
-                    <input type="text" name="acc_mi" class="modal-input" placeholder="M.I." value="{{ $accMi }}" style="max-width:60px;">
+    <div class="card" style="margin-bottom:1.25rem;">
+        <div class="card-header">
+            <div class="card-title"><i class="ti ti-lock"></i> Location &amp; Assignment</div>
+            <span class="chip-badge" style="background:#f5f5f5; color:#999;"><i class="ti ti-lock" style="font-size:10px"></i> Locked</span>
+        </div>
+        <div class="card-body">
+            <div class="locked-field-grid">
+                <div class="locked-field">
+                    <div class="locked-label">Campus</div>
+                    <div class="locked-value"><i class="ti ti-map-pin" style="font-size:13px; color:var(--text-muted);"></i> {{ $item->campus->name ?? '—' }}</div>
                 </div>
-                <div class="modal-hint">Will be saved as "Last Name, First Name M.I."</div>
+                <div class="locked-field">
+                    <div class="locked-label">Location</div>
+                    <div class="locked-value"><i class="ti ti-door" style="font-size:13px; color:var(--text-muted);"></i> {{ $item->location->location_name ?? 'Unassigned / Storage' }}</div>
+                </div>
+                <div class="locked-field" style="grid-column:1/-1;">
+                    <div class="locked-label">Accountable Person</div>
+                    <div class="locked-value"><i class="ti ti-user" style="font-size:13px; color:var(--text-muted);"></i> {{ $item->remarks ?? '—' }}</div>
+                </div>
             </div>
+            <p class="locked-note"><i class="ti ti-info-circle"></i> Campus, Location, and Accountable Person can only be changed using the <strong>Transfer</strong> feature on the All Equipment page.</p>
 
+            {{-- Keep hidden fields so the form still submits valid data --}}
+            <input type="hidden" name="campus_id" value="{{ $item->campus_id }}">
+            <input type="hidden" name="location_id" value="{{ $item->location_id }}">
+            <input type="hidden" name="acc_last" value="{{ $accLast ?? '' }}">
+            <input type="hidden" name="acc_first" value="{{ $accFirst ?? '' }}">
+            <input type="hidden" name="acc_mi" value="{{ $accMi ?? '' }}">
         </div>
     </div>
 

@@ -156,10 +156,7 @@
             <i class="ti ti-login"></i> Sign In as Administrator
         </button>
     </form>
-
-    <div class="back-link">
-        Regular user? <a href="{{ route('login') }}">Go to User Login →</a>
-    </div>
+    
 </div>
 
 <script>

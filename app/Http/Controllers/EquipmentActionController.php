@@ -155,7 +155,15 @@ class EquipmentActionController extends Controller
             $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
         }
 
-        $pdf = \PDF::loadView('pdf.equipment_report', compact('item', 'type', 'name', 'logoBase64'));
+        // Pull exact transfer logs for this specific item (matched by subject_type + subject_id)
+        $transferLogs = \App\Models\ActivityLog::with('user')
+            ->where('action', 'transfer')
+            ->where('subject_type', $type)
+            ->where('subject_id', $item->id)
+            ->latest()
+            ->get();
+
+        $pdf = \PDF::loadView('pdf.equipment_report', compact('item', 'type', 'name', 'logoBase64', 'transferLogs'));
 
         return $pdf->stream('Equipment-Report-' . str_replace(' ', '-', $name) . '.pdf');
     }
@@ -207,5 +215,112 @@ class EquipmentActionController extends Controller
         );
 
         return back()->with('success', 'Equipment has been permanently transferred to waste.');
+    }
+
+    public function bulkTransfer(Request $request)
+    {
+        $request->validate([
+            'items'       => 'required|string',
+            'campus_id'   => 'required|exists:campuses,id',
+            'location_id' => 'nullable|exists:locations,id',
+        ]);
+
+        $items = json_decode($request->items, true);
+        if (!is_array($items) || empty($items)) {
+            return back()->with('error', 'No items selected for transfer.');
+        }
+
+        $newRemarks = null;
+        if ($request->acc_last || $request->acc_first) {
+            $newRemarks = trim("{$request->acc_last}, {$request->acc_first} " . ($request->acc_mi ? $request->acc_mi . '.' : ''));
+        }
+
+        $newCampus   = \App\Models\Campus::find($request->campus_id);
+        $newLocation = $request->location_id ? \App\Models\Location::find($request->location_id) : null;
+
+        $transferredNames = [];
+
+        foreach ($items as $entry) {
+            [$type, $id] = explode(':', $entry);
+            $item = $this->resolveModel($type, (int) $id);
+
+            // Capture "before" snapshot
+            $prevCampusName   = $item->campus->name ?? '—';
+            $prevLocationName = $item->location->location_name ?? 'Unassigned';
+            $prevRemarks      = $item->remarks ?? '—';
+
+            $updateData = [
+                'campus_id'   => $request->campus_id,
+                'location_id' => $request->location_id,
+                'status'      => $request->location_id ? 'assigned' : 'available',
+            ];
+
+            if ($newRemarks) {
+                $updateData['remarks'] = $newRemarks;
+            }
+
+            $item->update($updateData);
+            $name = $this->displayName($item, $type);
+            $transferredNames[] = $name;
+
+            // Log a per-item transfer entry with full before/after detail
+            \App\Models\ActivityLog::record(
+                'transfer', 'Equipment',
+                "Transferred: {$name}",
+                $type, $item->id,
+                [
+                    'prev_campus'      => $prevCampusName,
+                    'new_campus'       => $newCampus->name ?? '—',
+                    'prev_location'    => $prevLocationName,
+                    'new_location'     => $newLocation->location_name ?? 'Unassigned',
+                    'prev_accountable' => $prevRemarks,
+                    'new_accountable'  => $newRemarks ?? $prevRemarks,
+                ]
+            );
+        }
+
+        return back()->with('success', count($items) . ' item(s) transferred successfully.');
+    }
+
+    public function bulkReport(Request $request)
+    {
+        $type     = $request->get('report_type', 'campus');
+        $campusId = $request->get('campus_id');
+        $person   = $request->get('accountable_person');
+
+        $models = [
+            'Computer' => \App\Models\ComputerInventory::class,
+            'Kitchen'  => \App\Models\KitchenEquipment::class,
+            'Office'   => \App\Models\OfficeEquipment::class,
+            'Lab'      => \App\Models\LabEquipment::class,
+            'General'  => \App\Models\GeneralEquipment::class,
+        ];
+
+        $items = collect();
+        foreach ($models as $label => $modelClass) {
+            $query = $modelClass::with(['campus', 'location'])
+                ->when($type === 'campus' && $campusId, fn($q) => $q->where('campus_id', $campusId))
+                ->when($type === 'person' && $person, fn($q) => $q->where('remarks', $person));
+
+            $items = $items->merge($query->get());
+        }
+
+        $items = $items->sortBy('display_name')->values();
+
+        $filterLabel = $type === 'campus'
+            ? ($campusId ? \App\Models\Campus::find($campusId)->name : 'All Campuses')
+            : ($person ?: 'All Accountable Persons');
+
+        // Embed the UCC logo as base64, same as the single-item report
+        $logoPath = public_path('images/ucc.png');
+        $logoBase64 = null;
+
+        if (file_exists($logoPath)) {
+            $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+        }
+
+        $pdf = \PDF::loadView('pdf.bulk_equipment_report', compact('items', 'type', 'filterLabel', 'logoBase64'));
+
+        return $pdf->stream('Inventory-Report-' . now()->format('Y-m-d') . '.pdf');
     }
 }

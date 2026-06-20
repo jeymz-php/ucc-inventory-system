@@ -49,3 +49,10 @@ June 20, 2026
 - Inventory page updated, with all counts are dynamic
 - Dashboard page updated, with all analytics reports and logs are dynamic
 - On the homepage and login page, developers added to recognize the developers team of UCC - IMS
+
+June 21, 2026
+
+- Removed the "Go to User Login" on the Maintenance page
+- Transferring the equipment item implemented, now with added assigning new room (optional)
+- Generate report of all equipment items implemented, improved with the selected category, article, and more on the output
+- History/Logs of Transfer equipment item added in the single report of equipment item

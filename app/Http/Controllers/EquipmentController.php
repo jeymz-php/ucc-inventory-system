@@ -91,9 +91,26 @@ class EquipmentController extends Controller
         $campuses  = Campus::where('is_active', true)->get();
         $locations = Location::orderBy('location_name')->get(['id', 'location_name']);
 
+        $equipModels = [
+            \App\Models\ComputerInventory::class,
+            \App\Models\KitchenEquipment::class,
+            \App\Models\OfficeEquipment::class,
+            \App\Models\LabEquipment::class,
+            \App\Models\GeneralEquipment::class,
+        ];
+
+        $accountablePersons = collect();
+        foreach ($equipModels as $modelClass) {
+            $accountablePersons = $accountablePersons->merge(
+                $modelClass::whereNotNull('remarks')->distinct()->pluck('remarks')
+            );
+        }
+        $accountablePersons = $accountablePersons->unique()->filter()->sort()->values();
+
         return view('pages.equipment', compact(
             'paginator', 'stats', 'campuses', 'locations',
-            'type', 'campusId', 'locId', 'status', 'search'
+            'type', 'campusId', 'locId', 'status', 'search',
+            'accountablePersons'
         ));
     }
 }
