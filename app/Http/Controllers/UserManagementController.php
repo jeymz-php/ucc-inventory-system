@@ -41,6 +41,25 @@ class UserManagementController extends Controller
         return view('pages.users', compact('users', 'campuses', 'departments', 'authUser'));
     }
 
+    public function show(User $user)
+    {
+        $authUser = auth()->user();
+
+        if ($authUser->role === 'admin' && $user->role === 'superadmin') {
+            abort(403, 'You cannot view a Super Admin account.');
+        }
+
+        $pendingDeletion = \App\Models\AccountDeletionRequest::where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->first();
+
+        $deletionHistory = \App\Models\AccountDeletionRequest::where('user_id', $user->id)
+            ->latest()
+            ->get();
+
+        return view('pages.user_show', compact('user', 'pendingDeletion', 'deletionHistory'));
+    }
+
     public function store(Request $request)
     {
         $authUser = auth()->user();

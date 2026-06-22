@@ -133,6 +133,11 @@
                     <td>
                         <div style="display:flex; gap:4px;">
 
+                            {{-- View --}}
+                            <a href="{{ route('users.show', $user) }}" class="btn-icon-action blue" title="View">
+                                <i class="ti ti-eye"></i>
+                            </a>
+
                             {{-- Edit --}}
                             @if(!($authRole === 'admin' && $user->role === 'superadmin'))
                             <button class="btn-icon-action blue"

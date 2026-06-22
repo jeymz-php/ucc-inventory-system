@@ -843,6 +843,83 @@ function toggleSidebar() {
 }
 </script>
 
+<script>
+function toggleNotifDropdown() {
+    const dd = document.getElementById('notif-dropdown');
+    if (dd) dd.classList.toggle('open');
+}
+
+document.addEventListener('click', function(e) {
+    const dd = document.getElementById('notif-dropdown');
+    if (dd && !e.target.closest('[onclick*="toggleNotifDropdown"]') && !dd.contains(e.target)) {
+        dd.classList.remove('open');
+    }
+});
+
+async function pollNotifications() {
+    const badge = document.getElementById('notif-badge');
+    const list  = document.getElementById('notif-list');
+    const summary = document.getElementById('notif-summary');
+    if (!badge) return; // not an admin/superadmin page
+
+    try {
+        const res  = await fetch('{{ route("notifications.poll") }}');
+        const data = await res.json();
+
+        if (data.count > 0) {
+            badge.style.display = 'flex';
+            badge.textContent = data.count;
+            summary.textContent = `${data.count} pending deletion request(s)`;
+        } else {
+            badge.style.display = 'none';
+            summary.textContent = 'No pending requests';
+        }
+
+        list.innerHTML = data.requests.map(r => `
+            <div style="padding:12px 16px; border-bottom:1px solid var(--border);">
+                <div style="font-size:13px; font-weight:600; color:var(--text-primary);">${r.user_name}</div>
+                <div style="font-size:11px; color:var(--text-muted); margin:2px 0 6px;">${r.user_email} • ${r.created_at}</div>
+                ${r.reason ? `<div style="font-size:12px; color:#666; margin-bottom:8px; font-style:italic;">"${r.reason}"</div>` : ''}
+                <div style="display:flex; gap:6px;">
+                    <button onclick="approveDeletion(${r.id})" style="flex:1; padding:6px; border:none; border-radius:6px; background:#fff5f5; color:#e24b4a; font-size:11.5px; font-weight:600; cursor:pointer;">
+                        <i class="ti ti-check"></i> Approve & Delete
+                    </button>
+                    <button onclick="rejectDeletion(${r.id})" style="flex:1; padding:6px; border:none; border-radius:6px; background:#f0faf4; color:#1a6b3a; font-size:11.5px; font-weight:600; cursor:pointer;">
+                        <i class="ti ti-x"></i> Reject
+                    </button>
+                </div>
+            </div>
+        `).join('') || '<div style="padding:20px; text-align:center; font-size:12px; color:#999;">No pending requests.</div>';
+
+    } catch (e) {
+        // Silent fail — avoid spamming console on network hiccups
+    }
+}
+
+async function approveDeletion(id) {
+    if (!confirm('Permanently delete this user account? This cannot be undone.')) return;
+    await fetch(`/notifications/${id}/approve`, {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+    });
+    pollNotifications();
+}
+
+async function rejectDeletion(id) {
+    await fetch(`/notifications/${id}/reject`, {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+    });
+    pollNotifications();
+}
+
+// Poll every 8 seconds
+if (document.getElementById('notif-badge')) {
+    pollNotifications();
+    setInterval(pollNotifications, 8000);
+}
+</script>
+
 @stack('scripts')
 </body>
 </html>

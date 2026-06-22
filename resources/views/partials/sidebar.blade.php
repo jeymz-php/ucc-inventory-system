@@ -77,9 +77,14 @@
             <i class="ti ti-alert-triangle"></i> Condemned
         </a>
 
-        <a href="{{ route('system.status') }}"
-        class="nav-item {{ request()->routeIs('system.*') ? 'active' : '' }}">
-            <i class="ti ti-activity"></i> System Status
+        <a href="{{ route('notifications.index') }}"
+           class="nav-item {{ request()->routeIs('notifications.*') ? 'active' : '' }}">
+            <i class="ti ti-bell"></i> Notifications
+        </a>
+
+        <a href="{{ route('system.settings') }}"
+           class="nav-item {{ request()->routeIs('system.*') ? 'active' : '' }}">
+            <i class="ti ti-settings"></i> System Settings
         </a>
         @endif
 

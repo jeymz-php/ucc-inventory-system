@@ -18,6 +18,11 @@ use App\Http\Controllers\EquipmentActionController;
 use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\CondemnedController;
 use App\Http\Controllers\CondemnedStoreController;
+use App\Http\Controllers\AccountReactivationController;
+use App\Http\Controllers\AccountSettingsController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\SystemSettingsController;
+use App\Http\Controllers\BackupRestoreController;
 
 // ──────────────────────────────────────────────
 // Landing page
@@ -56,6 +61,10 @@ Auth::routes([
 // ──────────────────────────────────────────────
 Route::middleware('auth')->group(function () {
     Route::put('/password/change', [PasswordChangeController::class, 'update'])->name('password.change');
+
+    Route::get('/account/settings',          [AccountSettingsController::class, 'index'])->name('account.settings');
+    Route::post('/account/deactivate',        [AccountSettingsController::class, 'deactivate'])->name('account.deactivate');
+    Route::post('/account/request-deletion',  [AccountSettingsController::class, 'requestDeletion'])->name('account.request-deletion');
 });
 
 // ──────────────────────────────────────────────
@@ -64,6 +73,9 @@ Route::middleware('auth')->group(function () {
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware('auth')
     ->name('dashboard');
+
+Route::post('/account/reactivate', [AccountReactivationController::class, 'reactivate'])->name('account.reactivate');
+Route::post('/account/cancel-reactivate', [AccountReactivationController::class, 'cancel'])->name('account.cancel-reactivate');
 
 // ──────────────────────────────────────────────
 // Admin + Super Admin only routes
@@ -117,11 +129,36 @@ Route::middleware(['auth', 'role:admin,superadmin'])->group(function () {
     Route::post('/condemned', [CondemnedStoreController::class, 'store'])->name('condemned.store');
 
     Route::get('/users',                  [UserManagementController::class, 'index'])->name('users');
+    Route::get('/users/{user}',          [UserManagementController::class, 'show'])->name('users.show');
     Route::post('/users',                 [UserManagementController::class, 'store'])->name('users.store');
     Route::put('/users/{user}',           [UserManagementController::class, 'update'])->name('users.update');
     Route::delete('/users/{user}',        [UserManagementController::class, 'destroy'])->name('users.destroy');
     Route::patch('/users/{user}/archive', [UserManagementController::class, 'archive'])->name('users.archive');
 
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/poll',                 [NotificationController::class, 'poll'])->name('notifications.poll');
+    Route::post('/notifications/{deletionRequest}/approve', [NotificationController::class, 'approve'])->name('notifications.approve');
+    Route::post('/notifications/{deletionRequest}/reject',  [NotificationController::class, 'reject'])->name('notifications.reject');
+
+    Route::get('/settings', [SystemSettingsController::class, 'index'])->name('system.settings');
+
+});
+
+// System Status (superadmin only) — keep as is, just accessed via the new hub now
+Route::middleware(['auth', 'role:superadmin'])->prefix('system')->name('system.')->group(function () {
+    Route::get('/status',                [SystemStatusController::class, 'index'])->name('status');
+    Route::post('/status/toggle',        [SystemStatusController::class, 'toggle'])->name('status.toggle');
+    Route::patch('/logs/{log}/resolve',  [SystemStatusController::class, 'resolveLog'])->name('logs.resolve');
+    Route::delete('/logs/clear',         [SystemStatusController::class, 'clearLogs'])->name('logs.clear');
+
+    // Backup & Restore (superadmin only — destructive operations)
+    Route::get('/backup',                [BackupRestoreController::class, 'index'])->name('backup.index');
+    Route::post('/backup/full',          [BackupRestoreController::class, 'backupFull'])->name('backup.full');
+    Route::post('/backup/selective',     [BackupRestoreController::class, 'backupSelective'])->name('backup.selective');
+    Route::get('/backup/download/{file}',[BackupRestoreController::class, 'download'])->name('backup.download');
+    Route::delete('/backup/{file}',      [BackupRestoreController::class, 'deleteBackup'])->name('backup.delete');
+    Route::post('/restore',              [BackupRestoreController::class, 'restore'])->name('backup.restore');
+    Route::post('/import',               [BackupRestoreController::class, 'importSql'])->name('backup.import');
 });
 
 // ──────────────────────────────────────────────

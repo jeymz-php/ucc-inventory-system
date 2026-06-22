@@ -56,3 +56,10 @@ June 21, 2026
 - Transferring the equipment item implemented, now with added assigning new room (optional)
 - Generate report of all equipment items implemented, improved with the selected category, article, and more on the output
 - History/Logs of Transfer equipment item added in the single report of equipment item
+
+June 22, 2026
+- Account Deactivation and Account Deletion for User improved
+- System Settings for Admin/Super Admin implemented, with a contents of settings like Change Password, System Status, Backup and Restore database
+- User's account can now view on Admin/Super Admin
+- Notifications implemented with a page of it for full access
+- Account on Deactivated can still log the account, with a validation of confirming to reactivate the account by itself

@@ -226,6 +226,18 @@
         }
         .modal-overlay.open { display: flex; }
 
+        .modal-box-sm {
+            background: #fff;
+            border-radius: 14px;
+            padding: 1.5rem;
+            width: 100%;
+            max-width: 420px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.18);
+            animation: modalDropIn 0.2s ease;
+        }
+
         .modal-box-lg {
             background: #fff;
             border-radius: 14px;
@@ -366,6 +378,32 @@
 
     </div>
 </div>
+
+@if(session('show_reactivate_modal'))
+<div class="modal-overlay open" id="reactivate-modal">
+    <div class="modal-box-sm" style="text-align:center;">
+        <div style="width:64px; height:64px; border-radius:50%; background:#fff8f0; display:flex; align-items:center; justify-content:center; margin:0 auto 1.2rem; font-size:28px; color:#ef9f27;">
+            <i class="ti ti-user-pause"></i>
+        </div>
+        <div style="font-size:18px; font-weight:700; color:#111; margin-bottom:0.5rem;">Account Deactivated</div>
+        <p style="font-size:13px; color:#666; line-height:1.6; margin-bottom:1.5rem;">
+            Your account is currently deactivated. Would you like to reactivate it now and continue to your dashboard?
+        </p>
+        <form method="POST" action="{{ route('account.reactivate') }}" style="margin-bottom:0.6rem;">
+            @csrf
+            <button type="submit" class="btn-login" style="margin:0;">
+                <i class="ti ti-rotate"></i> Yes, Reactivate My Account
+            </button>
+        </form>
+        <form method="POST" action="{{ route('account.cancel-reactivate') }}">
+            @csrf
+            <button type="submit" style="width:100%; padding:11px; background:transparent; border:1.5px solid #e0e0e0; border-radius:8px; color:#888; font-size:13px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif;">
+                Cancel
+            </button>
+        </form>
+    </div>
+</div>
+@endif
 
 <script>
 function togglePassword() {

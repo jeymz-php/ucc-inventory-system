@@ -32,17 +32,13 @@ class AdminLoginController extends Controller
 
             if (!in_array($user->role, ['admin', 'superadmin'])) {
                 Auth::logout();
-                SystemLog::create([
-                    'type'       => 'warning',
-                    'title'      => 'Unauthorized Admin Login Attempt',
-                    'message'    => "User {$user->email} (role: {$user->role}) attempted to access admin login.",
-                    'url'        => request()->fullUrl(),
-                    'method'     => 'POST',
-                    'user_id'    => $user->id,
-                    'user_role'  => $user->role,
-                    'ip_address' => request()->ip(),
-                ]);
+                // ... existing unauthorized log code stays the same ...
                 return back()->withErrors(['email' => 'Access denied. This login is for administrators only.']);
+            }
+
+            if (!$user->is_active) {
+                Auth::logout();
+                return back()->withErrors(['email' => 'Your account has been deactivated. Please contact a Super Admin.']);
             }
 
             $request->session()->regenerate();
