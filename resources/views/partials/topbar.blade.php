@@ -83,13 +83,6 @@
                     Account Settings
                 </a>
 
-                @if(in_array(auth()->user()->role, ['admin', 'superadmin']))
-                <a href="#" class="settings-item">
-                    <i class="ti ti-database-export"></i>
-                    Backup &amp; Restore Data
-                </a>
-                @endif
-
                 @if(auth()->user()->role === 'superadmin')
                 <div class="settings-divider"></div>
                 <a href="{{ route('system.status') }}" class="settings-item">

@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             LocationTypeSeeder::class,
             LocationSeeder::class,
             EquipmentArticleSeeder::class,
+            ConsumableCategorySeeder::class,
         ]);
     }
 }

@@ -25,12 +25,6 @@
         <div class="settings-tile-title">System Status</div>
         <div class="settings-tile-desc">Monitor uptime, toggle maintenance mode, and review system logs.</div>
     </a>
-
-    <a href="{{ route('system.backup.index') }}" class="settings-tile">
-        <div class="settings-tile-icon" style="background:#fff8f0; color:#ef9f27;"><i class="ti ti-database"></i></div>
-        <div class="settings-tile-title">Backup &amp; Restore Data</div>
-        <div class="settings-tile-desc">Create backups, restore data, or import from the original system.</div>
-    </a>
     @endif
 
 </div>
