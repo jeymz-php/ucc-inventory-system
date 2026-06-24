@@ -38,6 +38,13 @@
             <i class="ti ti-layout-dashboard"></i> Dashboard
         </a>
 
+        @if(auth()->user()->role === 'user')
+        <a href="{{ route('consumables') }}"
+           class="nav-item {{ request()->routeIs('consumables') ? 'active' : '' }}">
+            <i class="ti ti-package"></i> Consumables
+        </a>
+        @endif
+
         {{-- Admin & Super Admin only --}}
         @if(in_array(auth()->user()->role, ['admin', 'superadmin']))
 

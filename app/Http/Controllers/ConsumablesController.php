@@ -24,7 +24,8 @@ class ConsumablesController extends Controller
         $stockStatus  = $request->get('stock_status');
 
         $query = Consumable::with('category')
-            ->when($search, fn($q) => $q->where('item_name', 'like', "%$search%"))
+            ->when($search, fn($q) => $q->where('item_name', 'like', "%$search%")
+                ->orWhere('brand', 'like', "%$search%"))
             ->when($categoryId, fn($q) => $q->where('category_id', $categoryId));
 
         $items = $query->orderBy('item_name')->get();
@@ -39,12 +40,20 @@ class ConsumablesController extends Controller
             'available'=> $allItems->filter(fn($i) => $i->status === 'available')->count(),
             'low'      => $allItems->filter(fn($i) => $i->status === 'low')->count(),
             'critical' => $allItems->filter(fn($i) => $i->status === 'critical')->count(),
+            'out_of_stock' => $allItems->filter(fn($i) => $i->current_stock <= 0)->count(),
             'categories' => ConsumableCategory::count(),
-            'pending_requests' => ConsumableRequest::where('status', 'pending')->count(),
+            'pending_requests' => \App\Models\ConsumableRequest::where('status', 'pending')->count(),
         ];
 
         $categories = ConsumableCategory::orderBy('name')->get();
         $campuses   = Campus::where('is_active', true)->get();
+
+        // Route to the correct view by role
+        if (auth()->user()->role === 'user') {
+            return view('pages.user.consumables', compact(
+                'items', 'stats', 'categories'
+            ));
+        }
 
         return view('pages.consumables', compact(
             'items', 'stats', 'categories', 'campuses',
