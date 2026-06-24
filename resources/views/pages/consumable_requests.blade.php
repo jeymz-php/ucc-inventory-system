@@ -152,12 +152,13 @@ async function viewRequestDetails(id) {
         <div class="detail-section">
             <div class="detail-section-title"><i class="ti ti-user"></i> Recipient Information</div>
             <div class="detail-grid">
-                <div class="detail-row"><span>Employee Name</span><strong>${req.recipient_first_name} ${req.recipient_mi||''} ${req.recipient_last_name}</strong></div>
-                <div class="detail-row"><span>Office/Department</span><strong>${req.department}</strong></div>
-                <div class="detail-row"><span>Campus</span><strong>${req.campus?.name ?? '—'}</strong></div>
-                <div class="detail-row"><span>Request Date</span><strong>${new Date(req.request_date).toLocaleDateString()}</strong></div>
+                <div class="detail-row"><span>Employee Name: </span><strong>${req.recipient_first_name} ${req.recipient_mi||''} ${req.recipient_last_name}</strong></div>
+                <div class="detail-row"><span>Office/Department: </span><strong>${req.department}</strong></div>
+                <div class="detail-row"><span>Campus: </span><strong>${req.campus?.name ?? '—'}</strong></div>
+                <div class="detail-row"><span>Request Date: </span><strong>${new Date(req.request_date).toLocaleDateString()}</strong></div>
             </div>
         </div>
+        <br>
         <div class="detail-section">
             <div class="detail-section-title"><i class="ti ti-list"></i> Requested Items</div>
             <table class="data-table"><thead><tr><th>Item</th><th>Qty</th><th>Purpose</th><th>Status</th></tr></thead><tbody>
@@ -171,12 +172,13 @@ async function viewRequestDetails(id) {
             `).join('')}
             </tbody></table>
         </div>
+        <br>
         <div class="detail-section">
             <div class="detail-section-title"><i class="ti ti-signature"></i> Signatories</div>
             <div class="detail-grid">
-                <div class="detail-row"><span>Requested By</span><strong>${req.requester?.name ?? '—'}</strong></div>
-                <div class="detail-row"><span>Approved By</span><strong>${req.approved_by ?? '—'}</strong></div>
-                <div class="detail-row"><span>Supply Officer</span><strong>${req.supply_officer ?? '—'}</strong></div>
+                <div class="detail-row"><span>Requested By: </span><strong>${req.requester?.name ?? '—'}</strong></div>
+                <div class="detail-row"><span>Approved By: </span><strong>${req.approved_by ?? '—'}</strong></div>
+                <div class="detail-row"><span>Supply Officer: </span><strong>${req.supply_officer ?? '—'}</strong></div>
             </div>
         </div>
     `;

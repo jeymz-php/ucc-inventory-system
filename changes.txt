@@ -68,5 +68,8 @@ June 23, 2026
 - Backup and Restore data removed
 - Backend of Consumables implemented
 
-June 24, 2026
+June 24, 2026 - Part I
 - Consumables implemented, not fully functional, need more improvement
+
+June 24, 2026 - Part II
+- Consumables Reports implemented (bug issue is the Exporting to Excel)

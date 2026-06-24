@@ -25,6 +25,7 @@ use App\Http\Controllers\SystemSettingsController;
 use App\Http\Controllers\ConsumablesController;
 use App\Http\Controllers\ConsumableRequestController;
 use App\Http\Controllers\BackupRestoreController;
+use App\Http\Controllers\ConsumableReportController;
 
 // ──────────────────────────────────────────────
 // Landing page
@@ -83,6 +84,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/account/deactivate',       [AccountSettingsController::class, 'deactivate'])->name('account.deactivate');
     Route::post('/account/request-deletion', [AccountSettingsController::class, 'requestDeletion'])->name('account.request-deletion');
 
+    // Consumable Reports (must be before {consumable} wildcard)
+    Route::get('/consumables/reports',        [ConsumableReportController::class, 'index'])->name('consumables.reports');
+    Route::get('/consumables/reports/excel',  [ConsumableReportController::class, 'exportExcel'])->name('consumables.reports.excel');
+    Route::get('/consumables/reports/pdf',    [ConsumableReportController::class, 'exportPdf'])->name('consumables.reports.pdf');
+
     // Consumables (read + request — all users)
     Route::get('/consumables',                                        [ConsumablesController::class, 'index'])->name('consumables');
     Route::get('/consumables/{consumable}',                           [ConsumablesController::class, 'show'])->name('consumables.show');
@@ -93,7 +99,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/consumable-requests/{consumableRequest}',            [ConsumableRequestController::class, 'show'])->name('consumable-requests.show');
     Route::post('/consumable-requests',                               [ConsumableRequestController::class, 'store'])->name('consumable-requests.store');
     Route::put('/consumable-requests/{consumableRequest}',            [ConsumableRequestController::class, 'update'])->name('consumable-requests.update');
-
 });
 
 // ──────────────────────────────────────────────
