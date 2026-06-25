@@ -76,3 +76,6 @@ June 24, 2026 - Part II
 
 June 24, 2026 - Part III
 - Consumable page in User side implemented, not fully functional, need to fix some problem
+
+June 25, 2026 - Part I
+- Fixed Consumable user side problem encountered

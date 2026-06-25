@@ -131,17 +131,22 @@
 
         <div id="cart-items-list" style="margin-bottom:1.25rem;"></div>
 
+        @php
+            $nameParts = explode(' ', auth()->user()->name);
+            $lastNameGuess = count($nameParts) > 1 ? $nameParts[count($nameParts) - 1] : '';
+            $firstNameGuess = $nameParts[0] ?? '';
+        @endphp
+
         <form method="POST" action="{{ route('consumable-requests.store') }}" id="cart-submit-form">
             @csrf
             <div class="modal-grid">
                 <div class="modal-form-group">
                     <div class="modal-label">Last Name *</div>
-                    <input type="text" name="recipient_last_name" class="modal-input" required
-                           value="{{ count(explode(' ', auth()->user()->name)) > 1 ? end(explode(' ', auth()->user()->name)) : '' }}">
+                    <input type="text" name="recipient_last_name" class="modal-input" required value="{{ $lastNameGuess }}">
                 </div>
                 <div class="modal-form-group">
                     <div class="modal-label">First Name *</div>
-                    <input type="text" name="recipient_first_name" class="modal-input" required value="{{ explode(' ', auth()->user()->name)[0] ?? '' }}">
+                    <input type="text" name="recipient_first_name" class="modal-input" required value="{{ $firstNameGuess }}">
                 </div>
             </div>
             <div class="modal-grid">
