@@ -19,12 +19,21 @@ class ConsumableRequestController extends Controller
     public function index(Request $request)
     {
         $status = $request->get('status', 'all');
+        $authUser = auth()->user();
 
-        $requests = ConsumableRequest::with(['items.consumable', 'campus', 'requester', 'reviewer'])
-            ->when($status !== 'all', fn($q) => $q->where('status', $status))
-            ->latest()
-            ->paginate(15)
-            ->withQueryString();
+        $query = ConsumableRequest::with(['items.consumable', 'campus', 'requester', 'reviewer'])
+            ->when($status !== 'all', fn($q) => $q->where('status', $status));
+
+        // Regular users only see their own requests
+        if ($authUser->role === 'user') {
+            $query->where('requested_by', $authUser->id);
+        }
+
+        $requests = $query->latest()->paginate(15)->withQueryString();
+
+        if ($authUser->role === 'user') {
+            return view('pages.user.my_requests', compact('requests', 'status'));
+        }
 
         return view('pages.consumable_requests', compact('requests', 'status'));
     }
@@ -32,30 +41,25 @@ class ConsumableRequestController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'recipient_last_name'  => 'required|string|max:100',
-            'recipient_first_name' => 'required|string|max:100',
-            'recipient_mi'         => 'nullable|string|max:10',
-            'campus_id'            => 'required|exists:campuses,id',
-            'department'           => 'required|string|max:150',
             'items'                => 'required|array|min:1',
             'items.*.consumable_id'=> 'required|exists:consumables,id',
             'items.*.quantity'     => 'required|integer|min:1',
-            'items.*.purpose'      => 'nullable|string|max:255',
+            'items.*.purpose'      => 'required|string|max:255',
         ]);
 
-        $authUser   = auth()->user();
-        $autoApprove= in_array($authUser->role, ['admin', 'superadmin']);
+        $authUser    = auth()->user();
+        $autoApprove = in_array($authUser->role, ['admin', 'superadmin']);
 
         $consumableRequest = ConsumableRequest::create([
             'reference_no'         => ConsumableRequest::generateReferenceNo(),
-            'recipient_last_name'  => $request->recipient_last_name,
-            'recipient_first_name' => $request->recipient_first_name,
-            'recipient_mi'         => $request->recipient_mi,
-            'campus_id'            => $request->campus_id,
-            'department'           => $request->department,
+            'recipient_last_name'  => explode(' ', $authUser->name)[count(explode(' ', $authUser->name)) - 1] ?? $authUser->name,
+            'recipient_first_name' => explode(' ', $authUser->name)[0] ?? $authUser->name,
+            'recipient_mi'         => null,
+            'campus_id'            => $authUser->campus_id,
+            'department'           => $authUser->department->department_name ?? 'N/A',
             'request_date'         => now(),
-            'approved_by'          => $request->approved_by,
-            'supply_officer'       => $request->supply_officer,
+            'approved_by'          => 'REYNALDO H. CARANDANG JR.',
+            'supply_officer'       => 'MARVIN Z. GERVACIO',
             'status'               => $autoApprove ? 'approved' : 'pending',
             'requested_by'         => $authUser->id,
             'reviewed_by'          => $autoApprove ? $authUser->id : null,
@@ -67,7 +71,7 @@ class ConsumableRequestController extends Controller
                 'consumable_request_id' => $consumableRequest->id,
                 'consumable_id'         => $itemData['consumable_id'],
                 'quantity'              => $itemData['quantity'],
-                'purpose'               => $itemData['purpose'] ?? null,
+                'purpose'               => $itemData['purpose'],
                 'status'                => $autoApprove ? 'approved' : 'pending',
             ]);
 
@@ -166,5 +170,17 @@ class ConsumableRequestController extends Controller
             'new_total'      => $newTotal,
             'user_id'        => $user->id,
         ]);
+    }
+
+    public function report(ConsumableRequest $consumableRequest)
+    {
+        $consumableRequest->load(['items.consumable', 'campus', 'requester']);
+
+        $logoPath = public_path('images/caloocannewlogo.png');
+        $logoBase64 = file_exists($logoPath) ? 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath)) : null;
+
+        $pdf = \PDF::loadView('pdf.consumable_release_report', compact('consumableRequest', 'logoBase64'));
+
+        return $pdf->stream('Release-Report-' . $consumableRequest->reference_no . '.pdf');
     }
 }

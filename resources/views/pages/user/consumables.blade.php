@@ -4,6 +4,20 @@
 
 @section('content')
 
+@if($errors->any())
+<div class="alert alert-error">
+    <i class="ti ti-alert-circle"></i>
+    <div class="alert-text">
+        <strong>Request Failed</strong>
+        <ul style="margin:4px 0 0; padding-left:18px;">
+            @foreach($errors->all() as $error)
+            <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+</div>
+@endif
+
 @php
     $firstName = explode(' ', auth()->user()->name)[0];
     $hour = now()->hour;
@@ -123,50 +137,36 @@
 
 {{-- CART / REQUEST MODAL --}}
 <div class="modal-overlay" id="cart-modal">
-    <div class="modal-box-lg" style="max-width:600px;">
+    <div class="modal-box-lg" style="max-width:620px;">
         <div class="modal-header-row" style="background:var(--green-dark); margin:-1.5rem -1.5rem 1.25rem; padding:1.1rem 1.5rem; border-radius:14px 14px 0 0;">
             <div class="modal-title-sm" style="color:#fff;"><i class="ti ti-shopping-cart"></i> My Request Cart</div>
             <button class="modal-close" onclick="document.getElementById('cart-modal').classList.remove('open');"><i class="ti ti-x"></i></button>
         </div>
 
+        <div class="detail-section">
+            <div class="detail-section-title"><i class="ti ti-user"></i> Your Information</div>
+            <div class="detail-grid">
+                <div class="detail-row"><span>Full Name</span><strong>{{ auth()->user()->name }}</strong></div>
+                <div class="detail-row"><span>Office/Department</span><strong>{{ auth()->user()->department->department_name ?? 'N/A' }}</strong></div>
+                <div class="detail-row"><span>Campus</span><strong>{{ auth()->user()->campus->name ?? 'N/A' }}</strong></div>
+                <div class="detail-row"><span>Contact Number</span><strong>{{ auth()->user()->phone ?? 'N/A' }}</strong></div>
+                <div class="detail-row"><span>Request Date</span><strong>{{ now()->format('M d, Y') }}</strong></div>
+            </div>
+        </div>
+
         <div id="cart-items-list" style="margin-bottom:1.25rem;"></div>
 
-        @php
-            $nameParts = explode(' ', auth()->user()->name);
-            $lastNameGuess = count($nameParts) > 1 ? $nameParts[count($nameParts) - 1] : '';
-            $firstNameGuess = $nameParts[0] ?? '';
-        @endphp
+        <div class="detail-section">
+            <div class="detail-section-title"><i class="ti ti-signature"></i> Signatories</div>
+            <div class="detail-grid">
+                <div class="detail-row"><span>Approved By</span><strong>REYNALDO H. CARANDANG JR.</strong></div>
+                <div class="detail-row"><span>Supply Officer</span><strong>MARVIN Z. GERVACIO</strong></div>
+            </div>
+        </div>
 
         <form method="POST" action="{{ route('consumable-requests.store') }}" id="cart-submit-form">
             @csrf
-            <div class="modal-grid">
-                <div class="modal-form-group">
-                    <div class="modal-label">Last Name *</div>
-                    <input type="text" name="recipient_last_name" class="modal-input" required value="{{ $lastNameGuess }}">
-                </div>
-                <div class="modal-form-group">
-                    <div class="modal-label">First Name *</div>
-                    <input type="text" name="recipient_first_name" class="modal-input" required value="{{ $firstNameGuess }}">
-                </div>
-            </div>
-            <div class="modal-grid">
-                <div class="modal-form-group">
-                    <div class="modal-label">Campus *</div>
-                    <select name="campus_id" class="modal-input" required>
-                        <option value="">-- Select Campus --</option>
-                        @foreach(\App\Models\Campus::where('is_active', true)->get() as $campus)
-                        <option value="{{ $campus->id }}" {{ auth()->user()->campus_id == $campus->id ? 'selected' : '' }}>{{ $campus->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="modal-form-group">
-                    <div class="modal-label">Office/Department *</div>
-                    <input type="text" name="department" class="modal-input" required value="{{ auth()->user()->department->department_name ?? '' }}">
-                </div>
-            </div>
-
             <div id="cart-hidden-items"></div>
-
             <button type="submit" class="modal-btn-primary" id="cart-submit-btn"><i class="ti ti-send"></i> Submit Request</button>
         </form>
     </div>
@@ -263,6 +263,13 @@
 @endsection
 
 @push('scripts')
+
+@if($errors->any())
+document.addEventListener('DOMContentLoaded', function() {
+    // Can't restore cart contents after a redirect, but at least surface the error clearly
+    window.scrollTo(0, 0);
+});
+@endif
 <script>
 let cart = {}; // { id: { name, unit, max, qty } }
 
@@ -281,13 +288,11 @@ function addToCart(id, name, unit, maxStock) {
     if (cart[id]) {
         if (cart[id].qty < maxStock) cart[id].qty++;
     } else {
-        cart[id] = { name, unit, max: maxStock, qty: 1 };
+        cart[id] = { name, unit, max: maxStock, qty: 1, purpose: '' };
     }
     updateCartUI();
 
-    // Visual feedback on the button
     const btn = event.target.closest('button');
-    const original = btn.innerHTML;
     btn.innerHTML = '<i class="ti ti-check"></i> Added!';
     btn.classList.add('in-cart');
     setTimeout(() => {
@@ -305,25 +310,37 @@ function openCartModal() {
         document.getElementById('cart-submit-btn').disabled = true;
     } else {
         document.getElementById('cart-submit-btn').disabled = false;
-        list.innerHTML = Object.entries(cart).map(([id, item]) => `
-            <div class="cart-row">
-                <div class="cart-row-name">${item.name}</div>
-                <div class="cart-row-qty">
-                    <input type="number" min="1" max="${item.max}" value="${item.qty}" onchange="updateCartQty(${id}, this.value)">
+        list.innerHTML = `
+            <div class="detail-section-title" style="margin-bottom:0.75rem;"><i class="ti ti-list"></i> Items Requested</div>
+            ${Object.entries(cart).map(([id, item]) => `
+                <div class="cart-row" style="flex-wrap:wrap;">
+                    <div style="display:flex; align-items:center; gap:10px; width:100%; margin-bottom:6px;">
+                        <div class="cart-row-name" style="flex:1;">${item.name}</div>
+                        <div class="cart-row-qty"><input type="number" min="1" max="${item.max}" value="${item.qty}" onchange="updateCartQty(${id}, this.value)"></div>
+                        <div style="font-size:11px; color:#888;">${item.unit}</div>
+                        <button type="button" class="cart-row-remove" onclick="removeFromCart(${id})"><i class="ti ti-trash"></i></button>
+                    </div>
+                    <input type="text" id="purpose-input-${id}" placeholder="Purpose (e.g. Office use, Clinic use...)" required
+                           class="modal-input" style="width:100%; padding:8px 10px; font-size:12.5px;"
+                           value="${item.purpose || ''}"
+                           oninput="cart[${id}].purpose = this.value; syncHiddenInputs();">
                 </div>
-                <div style="font-size:11px; color:#888;">${item.unit}</div>
-                <button type="button" class="cart-row-remove" onclick="removeFromCart(${id})"><i class="ti ti-trash"></i></button>
-            </div>
-        `).join('');
+            `).join('')}
+        `;
 
-        hiddenWrap.innerHTML = Object.entries(cart).map(([id, item], idx) => `
-            <input type="hidden" name="items[${idx}][consumable_id]" value="${id}">
-            <input type="hidden" name="items[${idx}][quantity]" value="${item.qty}">
-            <input type="hidden" name="items[${idx}][purpose]" value="">
-        `).join('');
+        syncHiddenInputs();
     }
 
     document.getElementById('cart-modal').classList.add('open');
+}
+
+function syncHiddenInputs() {
+    const hiddenWrap = document.getElementById('cart-hidden-items');
+    hiddenWrap.innerHTML = Object.entries(cart).map(([id, item], idx) => `
+        <input type="hidden" name="items[${idx}][consumable_id]" value="${id}">
+        <input type="hidden" name="items[${idx}][quantity]" value="${item.qty}">
+        <input type="hidden" name="items[${idx}][purpose]" value="${(item.purpose || '').replace(/"/g, '&quot;')}">
+    `).join('');
 }
 
 function updateCartQty(id, val) {
@@ -331,7 +348,7 @@ function updateCartQty(id, val) {
     if (val < 1) val = 1;
     if (val > cart[id].max) val = cart[id].max;
     cart[id].qty = val;
-    openCartModal(); // refresh
+    openCartModal();
 }
 
 function removeFromCart(id) {
@@ -364,6 +381,10 @@ document.querySelectorAll('.user-stock-pill').forEach(pill => {
         this.classList.add('active');
         filterItems();
     });
+});
+
+document.getElementById('cart-submit-form').addEventListener('submit', function() {
+    syncHiddenInputs();
 });
 
 document.querySelectorAll('.modal-overlay').forEach(o => {

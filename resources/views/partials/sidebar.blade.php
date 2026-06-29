@@ -43,6 +43,10 @@
            class="nav-item {{ request()->routeIs('consumables') ? 'active' : '' }}">
             <i class="ti ti-package"></i> Consumables
         </a>
+        <a href="{{ route('consumable-requests') }}"
+           class="nav-item {{ request()->routeIs('consumable-requests') ? 'active' : '' }}">
+            <i class="ti ti-clipboard-list"></i> My Requests
+        </a>
         @endif
 
         {{-- Admin & Super Admin only --}}

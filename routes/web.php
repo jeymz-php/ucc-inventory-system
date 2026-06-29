@@ -99,6 +99,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/consumable-requests/{consumableRequest}',            [ConsumableRequestController::class, 'show'])->name('consumable-requests.show');
     Route::post('/consumable-requests',                               [ConsumableRequestController::class, 'store'])->name('consumable-requests.store');
     Route::put('/consumable-requests/{consumableRequest}',            [ConsumableRequestController::class, 'update'])->name('consumable-requests.update');
+    Route::get('/consumable-requests/{consumableRequest}/report', [ConsumableRequestController::class, 'report'])->name('consumable-requests.report');
 });
 
 // ──────────────────────────────────────────────

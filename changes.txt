@@ -79,3 +79,8 @@ June 24, 2026 - Part III
 
 June 25, 2026 - Part I
 - Fixed Consumable user side problem encountered
+
+June 29, 2026 - Part I
+- Fixed issue of requesting item from User side
+- Added generated report receipt of requested consumable item
+- My Requests page for User side implemented
