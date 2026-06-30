@@ -21,7 +21,7 @@
         </div>
         <p class="hero-sub">
             @if($role === 'user')
-                Welcome to the UCC Inventory System. You can view equipment assigned to your department.
+                Welcome to the UCC Inventory System. View equipment assigned to your account and manage consumable requests.
             @elseif($role === 'admin')
                 Here's what's happening with your inventory today. Track equipment status, monitor locations, and manage resources efficiently.
             @else
@@ -58,7 +58,7 @@
     <i class="ti ti-info-circle"></i>
     <div class="user-notice-text">
         <h4>Limited Access Account</h4>
-        <p>Your account has view-only access. You can see equipment assigned to your department. Contact your administrator to request additional permissions.</p>
+        <p>Your account has view-only access. You can browse consumables, track your requests, and view equipment assigned to your account. Contact your administrator to request additional permissions.</p>
     </div>
 </div>
 @endif
@@ -115,14 +115,14 @@
         </div>
     </div>
 
-    <div class="stat-card">
+    <a href="{{ route('my-equipment') }}" class="stat-card" style="text-decoration:none; color:inherit;">
         <div class="stat-icon red"><i class="ti ti-user-check"></i></div>
         <div>
             <div class="stat-value">{{ $stats['my_equipment'] }}</div>
             <div class="stat-label">Assigned to Me</div>
-            <div class="stat-sub"><i class="ti ti-package" style="font-size:11px"></i> Equipment items</div>
+            <div class="stat-sub"><i class="ti ti-package" style="font-size:11px"></i> View my equipment →</div>
         </div>
-    </div>
+    </a>
     @endif
 
 </div>

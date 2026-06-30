@@ -176,10 +176,13 @@ class ConsumableRequestController extends Controller
     {
         $consumableRequest->load(['items.consumable', 'campus', 'requester']);
 
-        $logoPath = public_path('images/caloocannewlogo.png');
-        $logoBase64 = file_exists($logoPath) ? 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath)) : null;
+        $headerLogoPath = public_path('images/ucc.png');
+        $headerLogoBase64 = file_exists($headerLogoPath) ? 'data:image/png;base64,' . base64_encode(file_get_contents($headerLogoPath)) : null;
 
-        $pdf = \PDF::loadView('pdf.consumable_release_report', compact('consumableRequest', 'logoBase64'));
+        $footerLogoPath = public_path('images/caloocannewlogo.png');
+        $footerLogoBase64 = file_exists($footerLogoPath) ? 'data:image/png;base64,' . base64_encode(file_get_contents($footerLogoPath)) : null;
+
+        $pdf = \PDF::loadView('pdf.consumable_release_report', compact('consumableRequest', 'headerLogoBase64', 'footerLogoBase64'));
 
         return $pdf->stream('Release-Report-' . $consumableRequest->reference_no . '.pdf');
     }

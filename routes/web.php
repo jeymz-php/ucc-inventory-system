@@ -26,6 +26,7 @@ use App\Http\Controllers\ConsumablesController;
 use App\Http\Controllers\ConsumableRequestController;
 use App\Http\Controllers\BackupRestoreController;
 use App\Http\Controllers\ConsumableReportController;
+use App\Http\Controllers\MyEquipmentController;
 
 // ──────────────────────────────────────────────
 // Landing page
@@ -100,6 +101,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/consumable-requests',                               [ConsumableRequestController::class, 'store'])->name('consumable-requests.store');
     Route::put('/consumable-requests/{consumableRequest}',            [ConsumableRequestController::class, 'update'])->name('consumable-requests.update');
     Route::get('/consumable-requests/{consumableRequest}/report', [ConsumableRequestController::class, 'report'])->name('consumable-requests.report');
+
+    // User assigned equipment (regular users only)
+    Route::get('/my-equipment',                              [MyEquipmentController::class, 'index'])->name('my-equipment');
+    Route::get('/my-equipment/{type}/{id}',                  [MyEquipmentController::class, 'show'])->name('my-equipment.show');
 });
 
 // ──────────────────────────────────────────────

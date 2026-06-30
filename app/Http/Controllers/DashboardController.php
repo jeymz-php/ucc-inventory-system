@@ -45,10 +45,10 @@ class DashboardController extends Controller
             $condemnedItems += $modelClass::where('is_condemned', true)->where('is_wasted', false)->count();
             $assignedEquipment += $modelClass::where('status', 'assigned')->count();
 
-            if ($role === 'user' && $user->department_id) {
-                // For regular users: count equipment located in rooms tied to their campus (best available signal)
-                $myAssignedCount += $modelClass::where('campus_id', $user->campus_id)
-                    ->where('status', 'assigned')->count();
+            if ($role === 'user') {
+                $myAssignedCount += $modelClass::where('assigned_to', $user->id)
+                    ->where('is_condemned', false)
+                    ->count();
             }
         }
 

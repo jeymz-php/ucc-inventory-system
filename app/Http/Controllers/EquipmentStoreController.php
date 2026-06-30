@@ -8,6 +8,7 @@ use App\Models\KitchenEquipment;
 use App\Models\LabEquipment;
 use App\Models\Location;
 use App\Models\OfficeEquipment;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class EquipmentStoreController extends Controller
@@ -27,15 +28,49 @@ class EquipmentStoreController extends Controller
         return response()->json($locations);
     }
 
-    private function accountablePerson(Request $request)
+    private function resolveAccountablePerson(Request $request, string $equipmentType): array
     {
-        $last  = $request->input('acc_last');
-        $first = $request->input('acc_first');
-        $mi    = $request->input('acc_mi');
+        $typeKey = 'accountable_type_' . $equipmentType;
+        $accountableType = $request->input($typeKey, 'existing');
 
-        if (!$last && !$first) return null;
+        $remarks = null;
+        $assignedTo = null;
 
-        return trim("{$last}, {$first} " . ($mi ? $mi . '.' : ''));
+        if ($accountableType === 'existing' && $request->filled('user_id')) {
+            $assignedTo = $request->input('user_id');
+            $user = User::find($assignedTo);
+
+            if ($user && !empty($user->name)) {
+                $fullName = trim($user->name);
+
+                if ($fullName === 'System Administrator' || $fullName === 'Administrator') {
+                    $remarks = $fullName;
+                } else {
+                    $nameParts = explode(' ', $fullName);
+                    if (count($nameParts) > 1) {
+                        $lastName = array_pop($nameParts);
+                        $firstName = implode(' ', $nameParts);
+                        $remarks = $lastName . ', ' . $firstName;
+                    } else {
+                        $remarks = $fullName;
+                    }
+                }
+            }
+        } elseif ($accountableType === 'manual' && $request->filled('acc_first') && $request->filled('acc_last')) {
+            $lastName  = trim($request->input('acc_last'));
+            $firstName = trim($request->input('acc_first'));
+            $mi        = trim($request->input('acc_mi'));
+
+            $remarks = $lastName . ', ' . $firstName;
+            if (!empty($mi)) {
+                $remarks .= ' ' . rtrim($mi, '.') . '.';
+            }
+        }
+
+        return [
+            'remarks'     => $remarks,
+            'assigned_to' => $assignedTo,
+        ];
     }
 
     public function storeComputer(Request $request)
@@ -54,6 +89,7 @@ class EquipmentStoreController extends Controller
         ]);
 
         $isPackage = $request->article === 'Computer Package';
+        $accountable = $this->resolveAccountablePerson($request, 'Computer');
 
         ComputerInventory::create([
             'article'                  => $request->article,
@@ -73,7 +109,8 @@ class EquipmentStoreController extends Controller
             'condition_status'         => $request->condition_status,
             'campus_id'                => $request->campus_id,
             'location_id'              => $request->location_id,
-            'remarks'                  => $this->accountablePerson($request),
+            'remarks'                  => $accountable['remarks'],
+            'assigned_to'              => $accountable['assigned_to'],
             'cost'                     => $request->cost ?? 0,
             'status'                   => $request->location_id ? 'assigned' : 'available',
         ]);
@@ -95,7 +132,7 @@ class EquipmentStoreController extends Controller
             'kitchen_equipment', null
         );
 
-        $this->storeGeneric(KitchenEquipment::class, $request, 'equipment_name');
+        $this->storeGeneric(KitchenEquipment::class, $request, 'equipment_name', 'Kitchen');
         return back()->with('success', 'Kitchen equipment added to inventory.');
     }
 
@@ -107,7 +144,7 @@ class EquipmentStoreController extends Controller
             'office_equipment', null
         );
 
-        $this->storeGeneric(OfficeEquipment::class, $request, 'equipment_name');
+        $this->storeGeneric(OfficeEquipment::class, $request, 'equipment_name', 'Office');
         return back()->with('success', 'Office equipment added to inventory.');
     }
 
@@ -119,6 +156,8 @@ class EquipmentStoreController extends Controller
             'campus_id' => 'required|exists:campuses,id',
             'condition_status' => 'required|string',
         ]);
+
+        $accountable = $this->resolveAccountablePerson($request, 'Lab');
 
         LabEquipment::create([
             'article'              => $request->article,
@@ -134,7 +173,8 @@ class EquipmentStoreController extends Controller
             'location_id'          => $request->location_id,
             'calibration_date'     => $request->calibration_date,
             'purchase_date'        => $request->has_purchase_date ? $request->purchase_date : null,
-            'remarks'              => $this->accountablePerson($request),
+            'remarks'              => $accountable['remarks'],
+            'assigned_to'          => $accountable['assigned_to'],
             'cost'                 => $request->cost ?? 0,
             'status'               => $request->location_id ? 'assigned' : 'available',
         ]);
@@ -158,6 +198,8 @@ class EquipmentStoreController extends Controller
             'property_no' => 'required|string',
         ]);
 
+        $accountable = $this->resolveAccountablePerson($request, 'General');
+
         GeneralEquipment::create([
             'article'           => $request->article,
             'description'       => $request->description,
@@ -170,7 +212,8 @@ class EquipmentStoreController extends Controller
             'campus_id'         => $request->campus_id,
             'location_id'       => $request->location_id,
             'purchase_date'     => $request->has_purchase_date ? $request->purchase_date : null,
-            'remarks'           => $this->accountablePerson($request),
+            'remarks'           => $accountable['remarks'],
+            'assigned_to'       => $accountable['assigned_to'],
             'cost'              => $request->cost ?? 0,
             'status'            => $request->location_id ? 'assigned' : 'available',
         ]);
@@ -184,7 +227,7 @@ class EquipmentStoreController extends Controller
         return back()->with('success', 'General equipment added to inventory.');
     }
 
-    private function storeGeneric(string $modelClass, Request $request, string $nameField)
+    private function storeGeneric(string $modelClass, Request $request, string $nameField, string $equipmentType)
     {
         $request->validate([
             'article'   => 'required|string',
@@ -192,6 +235,8 @@ class EquipmentStoreController extends Controller
             'campus_id' => 'required|exists:campuses,id',
             'condition_status' => 'required|string',
         ]);
+
+        $accountable = $this->resolveAccountablePerson($request, $equipmentType);
 
         $modelClass::create([
             'article'           => $request->article,
@@ -206,7 +251,8 @@ class EquipmentStoreController extends Controller
             'campus_id'         => $request->campus_id,
             'location_id'       => $request->location_id,
             'purchase_date'     => $request->has_purchase_date ? $request->purchase_date : null,
-            'remarks'           => $this->accountablePerson($request),
+            'remarks'           => $accountable['remarks'],
+            'assigned_to'       => $accountable['assigned_to'],
             'cost'              => $request->cost ?? 0,
             'status'            => $request->location_id ? 'assigned' : 'available',
         ]);

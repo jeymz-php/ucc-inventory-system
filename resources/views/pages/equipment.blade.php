@@ -371,14 +371,14 @@
                 </div>
             </div>
 
-            @include('partials.equipment_condition_accountable')
-
             <div class="modal-form-group">
                 <div class="modal-label">Cost (₱)</div>
                 <input type="number" step="0.01" name="cost" class="modal-input" placeholder="Enter Cost (₱)">
             </div>
 
-            <button type="submit" class="modal-btn-primary"><i class="ti ti-device-floppy"></i> Add to Inventory</button>
+            @include('partials.equipment_condition_accountable', ['type' => 'Computer'])
+
+            <button type="submit" class="modal-btn-primary" style="margin-top:1rem;"><i class="ti ti-device-floppy"></i> Add to Inventory</button>
         </form>
     </div>
 </div>
@@ -393,7 +393,7 @@
         <form method="POST" action="{{ route('equipment.store.kitchen') }}">
             @csrf
             @include('partials.equipment_generic_fields', ['type' => 'Kitchen'])
-            <button type="submit" class="modal-btn-primary"><i class="ti ti-device-floppy"></i> Add to Inventory</button>
+            <button type="submit" class="modal-btn-primary" style="margin-top:1rem;"><i class="ti ti-device-floppy"></i> Add to Inventory</button>
         </form>
     </div>
 </div>
@@ -408,7 +408,7 @@
         <form method="POST" action="{{ route('equipment.store.office') }}">
             @csrf
             @include('partials.equipment_generic_fields', ['type' => 'Office'])
-            <button type="submit" class="modal-btn-primary"><i class="ti ti-device-floppy"></i> Add to Inventory</button>
+            <button type="submit" class="modal-btn-primary" style="margin-top:1rem;"><i class="ti ti-device-floppy"></i> Add to Inventory</button>
         </form>
     </div>
 </div>
@@ -423,7 +423,7 @@
         <form method="POST" action="{{ route('equipment.store.lab') }}">
             @csrf
             @include('partials.equipment_generic_fields', ['type' => 'Lab', 'showCalibration' => true])
-            <button type="submit" class="modal-btn-primary"><i class="ti ti-device-floppy"></i> Add to Inventory</button>
+            <button type="submit" class="modal-btn-primary" style="margin-top:1rem;"><i class="ti ti-device-floppy"></i> Add to Inventory</button>
         </form>
     </div>
 </div>
@@ -438,7 +438,7 @@
         <form method="POST" action="{{ route('equipment.store.general') }}">
             @csrf
             @include('partials.equipment_generic_fields', ['type' => 'General', 'showPropertyRequired' => true])
-            <button type="submit" class="modal-btn-primary"><i class="ti ti-device-floppy"></i> Add to Inventory</button>
+            <button type="submit" class="modal-btn-primary" style="margin-top:1rem;"><i class="ti ti-device-floppy"></i> Add to Inventory</button>
         </form>
     </div>
 </div>
@@ -509,6 +509,7 @@
     </div>
 </div>
 
+{{-- TRANSFER MODAL --}}
 <div class="modal-overlay" id="transfer-modal">
     <div class="modal-box-lg" style="max-width:620px;">
         <div class="modal-header-row" style="background:#ef9f27; margin:-1.5rem -1.5rem 1.25rem; padding:1.1rem 1.5rem; border-radius:14px 14px 0 0;">
@@ -541,14 +542,44 @@
                 </div>
             </div>
 
-            <div class="modal-form-group">
-                <div class="modal-label">New Accountable Person <span style="text-transform:none; font-weight:400;">(optional)</span></div>
-                <div style="display:flex; gap:6px;">
-                    <input type="text" name="acc_last" class="modal-input" placeholder="Last Name">
-                    <input type="text" name="acc_first" class="modal-input" placeholder="First Name">
-                    <input type="text" name="acc_mi" class="modal-input" placeholder="M.I." style="max-width:60px;">
+            <div class="modal-form-group" style="border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 1rem;">
+                <div class="modal-label">Transfer Accountable Type</div>
+                <div style="display: flex; gap: 1.5rem; align-items: center; margin-bottom: 0.75rem;">
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
+                        <!-- Added name="transfer_accountable_type" group -->
+                        <input type="radio" name="transfer_accountable_type" value="existing" checked onchange="toggleAccountableType(this)" style="accent-color: #ef9f27;">
+                        Existed UCC - IMS User
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
+                        <!-- Added name="transfer_accountable_type" group -->
+                        <input type="radio" name="transfer_accountable_type" value="manual" onchange="toggleAccountableType(this)" style="accent-color: #ef9f27;">
+                        Non-existing UCC - IMS User
+                    </label>
                 </div>
-                <div class="modal-hint">Leave blank to keep the current accountable person on record.</div>
+
+                <!-- Existing Transfer Dropdown Selector -->
+                <div class="existing-user-group">
+                    <div class="modal-label">Select Destination UCC - IMS User</div>
+                    <select name="user_id" class="modal-input accountable-select-field">
+                        <option value="">-- Leave blank to keep current assignment --</option>
+                        @foreach($imsUsers as $user)
+                        <option value="{{ $user->id }}">
+                            {{ $user->name }}
+                        </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- Manual Transfer Entry Section -->
+                <div class="manual-user-group" style="display: none;">
+                    <div class="modal-label">New Accountable Person</div>
+                    <div style="display:flex; gap:6px;">
+                        <input type="text" name="acc_last" class="modal-input accountable-manual-input" placeholder="Last Name">
+                        <input type="text" name="acc_first" class="modal-input accountable-manual-input" placeholder="First Name">
+                        <input type="text" name="acc_mi" class="modal-input accountable-manual-input" placeholder="M.I." style="max-width:60px;">
+                    </div>
+                </div>
+                <div class="modal-hint" style="margin-top:6px;">Leave blank to keep the current accountable person on record.</div>
             </div>
 
             <button type="submit" class="modal-btn-primary" style="background:#ef9f27;"><i class="ti ti-arrows-exchange"></i> Execute Transfer</button>
@@ -747,6 +778,42 @@
 
 @push('scripts')
 <script>
+// ── ACCOUNTABLE PERSON TYPE TOGGLE ENGINE ──
+function toggleAccountableType(radioElement) {
+    const formGroupContainer = radioElement.closest('.modal-form-group');
+    const existingSection = formGroupContainer.querySelector('.existing-user-group');
+    const manualSection   = formGroupContainer.querySelector('.manual-user-group');
+    
+    const dropdownSelect  = formGroupContainer.querySelector('.accountable-select-field');
+    const manualInputs    = formGroupContainer.querySelectorAll('.accountable-manual-input');
+
+    if (radioElement.value === 'existing') {
+        existingSection.style.display = 'block';
+        manualSection.style.display   = 'none';
+        
+        if (dropdownSelect && dropdownSelect.closest('form').id !== 'transfer-form') {
+            dropdownSelect.required = true;
+        }
+        manualInputs.forEach(input => {
+            input.required = false;
+            input.value = '';
+        });
+    } else {
+        existingSection.style.display = 'none';
+        manualSection.style.display   = 'block';
+        
+        if (dropdownSelect) {
+            dropdownSelect.required = false;
+            dropdownSelect.value = '';
+        }
+        manualInputs.forEach(input => {
+            if (input.closest('form').id !== 'transfer-form' && !input.name.includes('acc_mi')) {
+                input.required = true;
+            }
+        });
+    }
+}
+
 // ── CHECKBOX SELECTION ──
 function updateTransferButton() {
     const checked = document.querySelectorAll('.equip-row-checkbox:checked');
@@ -965,7 +1032,6 @@ function openArticleManager(type) {
 
 function closeArticleManager() {
     document.getElementById('article-manager-modal').classList.remove('open');
-    // Refresh whichever form is open behind it
     const openForm = document.querySelector('.modal-overlay.open[id^="form-"]');
     if (openForm) loadArticlesIntoForm(currentManagerType, openForm.id);
 }

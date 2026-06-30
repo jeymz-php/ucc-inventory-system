@@ -145,22 +145,26 @@
 
         <div class="detail-section">
             <div class="detail-section-title"><i class="ti ti-user"></i> Your Information</div>
+            <br>
             <div class="detail-grid">
-                <div class="detail-row"><span>Full Name</span><strong>{{ auth()->user()->name }}</strong></div>
-                <div class="detail-row"><span>Office/Department</span><strong>{{ auth()->user()->department->department_name ?? 'N/A' }}</strong></div>
-                <div class="detail-row"><span>Campus</span><strong>{{ auth()->user()->campus->name ?? 'N/A' }}</strong></div>
-                <div class="detail-row"><span>Contact Number</span><strong>{{ auth()->user()->phone ?? 'N/A' }}</strong></div>
-                <div class="detail-row"><span>Request Date</span><strong>{{ now()->format('M d, Y') }}</strong></div>
+                <div class="detail-row"><span>Full Name: </span><strong>{{ auth()->user()->name }}</strong></div>
+                <div class="detail-row"><span>Office/Department: </span><strong>{{ auth()->user()->department->department_name ?? 'N/A' }}</strong></div>
+                <div class="detail-row"><span>Campus: </span><strong>{{ auth()->user()->campus->name ?? 'N/A' }}</strong></div>
+                <div class="detail-row"><span>Contact Number: </span><strong>{{ auth()->user()->phone ?? 'N/A' }}</strong></div>
+                <div class="detail-row"><span>Request Date: </span><strong>{{ now()->format('M d, Y') }}</strong></div>
             </div>
         </div>
+
+        <br>
 
         <div id="cart-items-list" style="margin-bottom:1.25rem;"></div>
 
         <div class="detail-section">
             <div class="detail-section-title"><i class="ti ti-signature"></i> Signatories</div>
+            <br>
             <div class="detail-grid">
-                <div class="detail-row"><span>Approved By</span><strong>REYNALDO H. CARANDANG JR.</strong></div>
-                <div class="detail-row"><span>Supply Officer</span><strong>MARVIN Z. GERVACIO</strong></div>
+                <div class="detail-row"><span>Approved By: </span><strong>REYNALDO H. CARANDANG JR.</strong></div>
+                <div class="detail-row"><span>Supply Officer: </span><strong>MARVIN Z. GERVACIO</strong></div>
             </div>
         </div>
 

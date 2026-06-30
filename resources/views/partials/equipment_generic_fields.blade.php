@@ -81,4 +81,4 @@
 </div>
 @endif
 
-@include('partials.equipment_condition_accountable')
+@include('partials.equipment_condition_accountable', ['type' => $type])

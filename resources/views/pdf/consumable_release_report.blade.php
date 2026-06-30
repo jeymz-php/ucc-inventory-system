@@ -6,8 +6,11 @@
         @page { margin: 30px 35px; }
         body { font-family: Helvetica, Arial, sans-serif; font-size: 11px; color: #222; }
 
-        .header-center { text-align: center; margin-bottom: 14px; }
-        .header-logo { width: 55px; height: 55px; margin: 0 auto 6px; }
+        .header-table { width: 100%; margin-bottom: 14px; border-collapse: collapse; }
+        .header-table td { border: none; padding: 0; vertical-align: middle; }
+        .header-logo-cell { width: 70px; }
+        .header-logo { width: 60px; height: 60px; }
+        .header-text-cell { text-align: left; padding-left: 10px; }
         .header-title { font-size: 15px; font-weight: bold; color: #111; margin: 0; }
         .header-sub { font-size: 11px; color: #444; margin: 2px 0 0; }
         .header-doc-title { font-size: 11.5px; font-weight: bold; text-decoration: underline; margin-top: 4px; }
@@ -52,12 +55,18 @@
 </head>
 <body>
 
-    <div class="header-center">
-        @if($logoBase64)<img src="{{ $logoBase64 }}" class="header-logo">@endif
-        <div class="header-title">UNIVERSITY OF CALOOCAN CITY</div>
-        <div class="header-sub">CONSUMABLE MANAGEMENT SYSTEM</div>
-        <div class="header-doc-title">OFFICIAL CONSUMABLE RELEASE REPORT</div>
-    </div>
+    <table class="header-table">
+        <tr>
+            <td class="header-logo-cell">
+                @if($headerLogoBase64)<img src="{{ $headerLogoBase64 }}" class="header-logo">@endif
+            </td>
+            <td class="header-text-cell">
+                <div class="header-title">UNIVERSITY OF CALOOCAN CITY</div>
+                <div class="header-sub">CONSUMABLE MANAGEMENT SYSTEM</div>
+                <div class="header-doc-title">OFFICIAL CONSUMABLE RELEASE REPORT</div>
+            </td>
+        </tr>
+    </table>
 
     <table class="info-table">
         <tr>
@@ -147,7 +156,7 @@
             <div class="footer-cell footer-left">Ref: {{ $consumableRequest->reference_no }}</div>
             <div class="footer-cell footer-center">{{ now()->format('Y-m-d h:i A') }}</div>
             <div class="footer-cell footer-right">
-                @if($logoBase64)<img src="{{ $logoBase64 }}" class="footer-logo">@endif
+                @if($footerLogoBase64)<img src="{{ $footerLogoBase64 }}" class="footer-logo">@endif
             </div>
         </div>
     </div>

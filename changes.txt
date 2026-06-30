@@ -84,3 +84,9 @@ June 29, 2026 - Part I
 - Fixed issue of requesting item from User side
 - Added generated report receipt of requested consumable item
 - My Requests page for User side implemented
+
+June 30, 2026
+
+- Equipment assigned to existed UCC - IMS user implemented
+- Accountable Person type implemented in Admin/Super Admin side
+- Consumable Release report updated, updated of header logo

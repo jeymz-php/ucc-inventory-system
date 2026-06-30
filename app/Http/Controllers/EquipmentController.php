@@ -9,6 +9,7 @@ use App\Models\KitchenEquipment;
 use App\Models\LabEquipment;
 use App\Models\Location;
 use App\Models\OfficeEquipment;
+use App\Models\User; // Imported for fetching registered UCC-IMS accounts
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
@@ -107,10 +108,216 @@ class EquipmentController extends Controller
         }
         $accountablePersons = $accountablePersons->unique()->filter()->sort()->values();
 
+        // Fetch users using the correct 'name' column from your SQL schema
+        $imsUsers = User::orderBy('name')
+            ->get(['id', 'name']);
+
         return view('pages.equipment', compact(
             'paginator', 'stats', 'campuses', 'locations',
             'type', 'campusId', 'locId', 'status', 'search',
-            'accountablePersons'
+            'accountablePersons', 'imsUsers'
         ));
+    }
+
+    /**
+     * Store Computer Equipment Form Submission
+     */
+    public function storeComputer(Request $request)
+    {
+        $accountable = $this->resolveAccountablePerson($request, 'Computer');
+
+        $serialNumber = $request->input('article') === 'Computer Package' ? null : $request->input('serial_number');
+
+        ComputerInventory::create([
+            'computer_set_description' => $request->input('description'),
+            'article'                  => $request->input('article'),
+            'serial_number'            => $serialNumber,
+            'serial_number_monitor'    => $request->input('serial_number_monitor'),
+            'serial_number_system'     => $request->input('serial_number_system'),
+            'processor'                => $request->input('processor'),
+            'ram'                      => $request->input('ram'),
+            'storage'                  => $request->input('storage'),
+            'unit'                     => $request->input('unit'),
+            'campus_id'                => $request->input('campus_id'),
+            'location_id'              => $request->input('location_id'),
+            'has_purchase_date'        => $request->input('has_purchase_date', 0),
+            'purchase_date'            => $request->input('purchase_date'),
+            'operating_system'         => $request->input('operating_system'),
+            'property_no'              => $request->input('property_no'),
+            'cost'                     => $request->input('cost') ?? 0.00,
+            'status'                   => $request->input('location_id') ? 'assigned' : 'available',
+            'condition_status'         => $request->input('condition_status'),
+            'remarks'                  => $accountable['remarks'],     // Saves plaintext "Lastname, Firstname" to database
+            'assigned_to'              => $accountable['assigned_to'], // Saves Foreign Key User ID mapping
+        ]);
+
+        return redirect()->route('equipment')->with('success', 'Computer equipment added successfully.');
+    }
+
+    /**
+     * Store Kitchen Equipment Form Submission
+     */
+    public function storeKitchen(Request $request)
+    {
+        $accountable = $this->resolveAccountablePerson($request, 'Kitchen');
+
+        KitchenEquipment::create([
+            'equipment_name'    => $request->input('article'),
+            'description'       => $request->input('description'),
+            'brand'             => $request->input('brand'),
+            'model'             => $request->input('model'),
+            'unit'              => $request->input('unit'),
+            'serial_number'     => $request->input('serial_number'),
+            'property_no'       => $request->input('property_no'),
+            'cost'              => $request->input('cost') ?? 0.00,
+            'campus_id'         => $request->input('campus_id'),
+            'location_id'       => $request->input('location_id'),
+            'has_purchase_date' => $request->input('has_purchase_date', 0),
+            'purchase_date'     => $request->input('purchase_date'),
+            'status'            => $request->input('location_id') ? 'assigned' : 'available',
+            'condition_status'  => $request->input('condition_status'),
+            'remarks'           => $accountable['remarks'],
+            'assigned_to'       => $accountable['assigned_to'],
+        ]);
+
+        return redirect()->route('equipment')->with('success', 'Kitchen equipment added successfully.');
+    }
+
+    /**
+     * Store Office Equipment Form Submission
+     */
+    public function storeOffice(Request $request)
+    {
+        $accountable = $this->resolveAccountablePerson($request, 'Office');
+
+        OfficeEquipment::create([
+            'equipment_name'    => $request->input('article'),
+            'description'       => $request->input('description'),
+            'brand'             => $request->input('brand'),
+            'model'             => $request->input('model'),
+            'unit'              => $request->input('unit'),
+            'serial_number'     => $request->input('serial_number'),
+            'property_no'       => $request->input('property_no'),
+            'cost'              => $request->input('cost') ?? 0.00,
+            'campus_id'         => $request->input('campus_id'),
+            'location_id'       => $request->input('location_id'),
+            'has_purchase_date' => $request->input('has_purchase_date', 0),
+            'purchase_date'     => $request->input('purchase_date'),
+            'status'            => $request->input('location_id') ? 'assigned' : 'available',
+            'condition_status'  => $request->input('condition_status'),
+            'remarks'           => $accountable['remarks'],
+            'assigned_to'       => $accountable['assigned_to'],
+        ]);
+
+        return redirect()->route('equipment')->with('success', 'Office equipment added successfully.');
+    }
+
+    /**
+     * Store Laboratory Equipment Form Submission
+     */
+    public function storeLab(Request $request)
+    {
+        $accountable = $this->resolveAccountablePerson($request, 'Lab');
+
+        LabEquipment::create([
+            'equipment_name'    => $request->input('article'),
+            'description'       => $request->input('description'),
+            'brand'             => $request->input('brand'),
+            'model'             => $request->input('model'),
+            'unit'              => $request->input('unit'),
+            'serial_number'     => $request->input('serial_number'),
+            'property_no'       => $request->input('property_no'),
+            'cost'              => $request->input('cost') ?? 0.00,
+            'campus_id'         => $request->input('campus_id'),
+            'location_id'       => $request->input('location_id'),
+            'has_purchase_date' => $request->input('has_purchase_date', 0),
+            'purchase_date'     => $request->input('purchase_date'),
+            'calibration_date'  => $request->input('calibration_date'),
+            'status'            => $request->input('location_id') ? 'assigned' : 'available',
+            'condition_status'  => $request->input('condition_status'),
+            'remarks'           => $accountable['remarks'],
+            'assigned_to'       => $accountable['assigned_to'],
+        ]);
+
+        return redirect()->route('equipment')->with('success', 'Laboratory equipment added successfully.');
+    }
+
+    /**
+     * Store General Equipment Form Submission
+     */
+    public function storeGeneral(Request $request)
+    {
+        $accountable = $this->resolveAccountablePerson($request, 'General');
+
+        GeneralEquipment::create([
+            'article'           => $request->input('article'),
+            'description'       => $request->input('description'),
+            'brand'             => $request->input('brand'),
+            'model'             => $request->input('model'),
+            'unit'              => $request->input('unit'),
+            'serial_number'     => $request->input('serial_number'),
+            'property_no'       => $request->input('property_no'),
+            'cost'              => $request->input('cost') ?? 0.00,
+            'campus_id'         => $request->input('campus_id'),
+            'location_id'       => $request->input('location_id'),
+            'has_purchase_date' => $request->input('has_purchase_date', 0),
+            'purchase_date'     => $request->input('purchase_date'),
+            'status'            => $request->input('location_id') ? 'assigned' : 'available',
+            'condition_status'  => $request->input('condition_status'),
+            'remarks'           => $accountable['remarks'],     // Correctly updates plaintext column
+            'assigned_to'       => $accountable['assigned_to'], // Correctly updates schema foreign key column
+        ]);
+
+        return redirect()->route('equipment')->with('success', 'General equipment added successfully.');
+    }
+
+    /**
+     * Helper to determine, format, and split accountable user strings 
+     * while mapping them directly to database schema columns.
+     */
+    private function resolveAccountablePerson(Request $request, string $equipmentType): array
+    {
+        $typeKey = 'accountable_type_' . $equipmentType;
+        $accountableType = $request->input($typeKey, 'existing');
+
+        $remarks = null;
+        $assignedTo = null;
+
+        if ($accountableType === 'existing' && $request->filled('user_id')) {
+            $assignedTo = $request->input('user_id');
+            $user = User::find($assignedTo);
+            
+            if ($user && !empty($user->name)) {
+                $fullName = trim($user->name);
+
+                // Check for system accounts or names that shouldn't be split by last name
+                if ($fullName === 'System Administrator' || $fullName === 'Administrator') {
+                    $remarks = $fullName;
+                } else {
+                    $nameParts = explode(' ', $fullName);
+                    if (count($nameParts) > 1) {
+                        $lastName = array_pop($nameParts); // Pops 'Gregorio'
+                        $firstName = implode(' ', $nameParts); // Implodes 'James Ryan'
+                        $remarks = $lastName . ', ' . $firstName; // Saves as 'Gregorio, James Ryan'
+                    } else {
+                        $remarks = $fullName;
+                    }
+                }
+            }
+        } elseif ($accountableType === 'manual' && $request->filled('acc_first') && $request->filled('acc_last')) {
+            $lastName  = trim($request->input('acc_last'));
+            $firstName = trim($request->input('acc_first'));
+            $mi        = trim($request->input('acc_mi'));
+
+            $remarks = $lastName . ', ' . $firstName;
+            if (!empty($mi)) {
+                $remarks .= ' ' . rtrim($mi, '.') . '.';
+            }
+        }
+
+        return [
+            'remarks'     => $remarks,     // To fill column `remarks`
+            'assigned_to' => $assignedTo,  // To fill column `assigned_to`
+        ];
     }
 }

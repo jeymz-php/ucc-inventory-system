@@ -68,6 +68,11 @@
                             @if($req->status === 'pending' && in_array(auth()->user()->role, ['admin','superadmin']))
                             <button class="table-icon-btn" style="background:#fff8f0; color:#ef9f27;" title="Check/Review" onclick="openCheckModal({{ $req->id }})"><i class="ti ti-checkbox"></i></button>
                             @endif
+                            @if(in_array($req->status, ['approved', 'partial']))
+                            <a href="{{ route('consumable-requests.report', $req->id) }}" target="_blank" class="table-icon-btn" style="background:#f4f0ff; color:#7c3aed;" title="Generate Report">
+                                <i class="ti ti-file-text"></i>
+                            </a>
+                            @endif
                             <button class="table-icon-btn edit" title="Edit" onclick="openEditRequestModal({{ $req->id }})"><i class="ti ti-edit"></i></button>
                         </div>
                     </td>
