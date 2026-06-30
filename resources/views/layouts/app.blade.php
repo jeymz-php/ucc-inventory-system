@@ -53,10 +53,12 @@
 
         .brand-icon {
             width: 38px; height: 38px;
-            background: var(--green-dark);
+            background: #fff;
             border-radius: 8px;
             display: flex; align-items: center; justify-content: center;
             color: #fff; font-size: 17px; flex-shrink: 0;
+            padding: 4px;
+            overflow: hidden;
         }
 
         .brand-text-main { font-size: 13px; font-weight: 700; color: #fff; line-height: 1.2; }
@@ -782,6 +784,15 @@
         }
         .capacity-pill i { font-size: 13px; color: var(--text-muted); }
 
+        @keyframes highlightFlash {
+            0%   { background: #fff3cd; }
+            50%  { background: #fff3cd; }
+            100% { background: transparent; }
+        }
+        .row-highlight-flash td {
+            animation: highlightFlash 3.5s ease-out;
+        }
+
         /* Responsive */
         @media (max-width: 1024px) {
             .stats-grid { grid-template-columns: repeat(2, 1fr); }
@@ -856,44 +867,100 @@ document.addEventListener('click', function(e) {
     }
 });
 
+function getReadNotifIds() {
+    try {
+        return JSON.parse(localStorage.getItem('read_notif_ids') || '[]');
+    } catch (e) {
+        return [];
+    }
+}
+
+function markNotifAsRead(type, id) {
+    const key = `${type}-${id}`;
+    const readIds = getReadNotifIds();
+    if (!readIds.includes(key)) {
+        readIds.push(key);
+        localStorage.setItem('read_notif_ids', JSON.stringify(readIds));
+    }
+}
+
 async function pollNotifications() {
     const badge = document.getElementById('notif-badge');
     const list  = document.getElementById('notif-list');
     const summary = document.getElementById('notif-summary');
-    if (!badge) return; // not an admin/superadmin page
+    if (!badge) return;
 
     try {
         const res  = await fetch('{{ route("notifications.poll") }}');
         const data = await res.json();
+        const readIds = getReadNotifIds();
 
-        if (data.count > 0) {
+        // Only count unread toward the badge
+        const unreadCount = data.requests.filter(r => !readIds.includes(`${r.type}-${r.id}`)).length;
+
+        if (unreadCount > 0) {
             badge.style.display = 'flex';
-            badge.textContent = data.count;
-            summary.textContent = `${data.count} pending deletion request(s)`;
+            badge.textContent = unreadCount;
+            const parts = [];
+            if (data.deletion_count > 0) parts.push(`${data.deletion_count} account deletion`);
+            if (data.consumable_count > 0) parts.push(`${data.consumable_count} consumable request`);
+            summary.textContent = parts.join(', ');
         } else {
             badge.style.display = 'none';
-            summary.textContent = 'No pending requests';
+            summary.textContent = data.count > 0 ? 'All caught up' : 'No pending notifications';
         }
 
-        list.innerHTML = data.requests.map(r => `
-            <div style="padding:12px 16px; border-bottom:1px solid var(--border);">
-                <div style="font-size:13px; font-weight:600; color:var(--text-primary);">${r.user_name}</div>
-                <div style="font-size:11px; color:var(--text-muted); margin:2px 0 6px;">${r.user_email} • ${r.created_at}</div>
-                ${r.reason ? `<div style="font-size:12px; color:#666; margin-bottom:8px; font-style:italic;">"${r.reason}"</div>` : ''}
-                <div style="display:flex; gap:6px;">
-                    <button onclick="approveDeletion(${r.id})" style="flex:1; padding:6px; border:none; border-radius:6px; background:#fff5f5; color:#e24b4a; font-size:11.5px; font-weight:600; cursor:pointer;">
-                        <i class="ti ti-check"></i> Approve & Delete
-                    </button>
-                    <button onclick="rejectDeletion(${r.id})" style="flex:1; padding:6px; border:none; border-radius:6px; background:#f0faf4; color:#1a6b3a; font-size:11.5px; font-weight:600; cursor:pointer;">
-                        <i class="ti ti-x"></i> Reject
-                    </button>
-                </div>
-            </div>
-        `).join('') || '<div style="padding:20px; text-align:center; font-size:12px; color:#999;">No pending requests.</div>';
+        list.innerHTML = data.requests.map(r => {
+            const isRead = readIds.includes(`${r.type}-${r.id}`);
+            const rowStyle = isRead ? 'opacity:0.55;' : '';
+
+            if (r.type === 'deletion') {
+                return `
+                    <div style="padding:12px 16px; border-bottom:1px solid var(--border); ${rowStyle}">
+                        <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                            <span style="font-size:9px; font-weight:700; background:#fff5f5; color:#e24b4a; padding:2px 7px; border-radius:10px; text-transform:uppercase;">Account Deletion</span>
+                            ${!isRead ? '<span style="width:7px; height:7px; border-radius:50%; background:#3b82f6; display:inline-block;"></span>' : ''}
+                        </div>
+                        <div style="font-size:13px; font-weight:600; color:var(--text-primary);">${r.title}</div>
+                        <div style="font-size:11px; color:var(--text-muted); margin:2px 0 6px;">${r.subtitle} • ${r.created_at}</div>
+                        ${r.reason ? `<div style="font-size:12px; color:#666; margin-bottom:8px; font-style:italic;">"${r.reason}"</div>` : ''}
+                        <div style="display:flex; gap:6px;">
+                            <button onclick="approveDeletion(${r.id})" style="flex:1; padding:6px; border:none; border-radius:6px; background:#fff5f5; color:#e24b4a; font-size:11.5px; font-weight:600; cursor:pointer;">
+                                <i class="ti ti-check"></i> Approve & Delete
+                            </button>
+                            <button onclick="rejectDeletion(${r.id})" style="flex:1; padding:6px; border:none; border-radius:6px; background:#f0faf4; color:#1a6b3a; font-size:11.5px; font-weight:600; cursor:pointer;">
+                                <i class="ti ti-x"></i> Reject
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                return `
+                    <div style="padding:12px 16px; border-bottom:1px solid var(--border); ${rowStyle}">
+                        <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                            <span style="font-size:9px; font-weight:700; background:#eff6ff; color:#3b82f6; padding:2px 7px; border-radius:10px; text-transform:uppercase;">Consumable Request</span>
+                            ${!isRead ? '<span style="width:7px; height:7px; border-radius:50%; background:#3b82f6; display:inline-block;"></span>' : ''}
+                        </div>
+                        <div style="font-size:13px; font-weight:600; color:var(--text-primary);">${r.title}</div>
+                        <div style="font-size:11px; color:var(--text-muted); margin:2px 0 8px;">${r.subtitle} • ${r.created_at}</div>
+                        <a href="#" onclick="reviewConsumableRequest(event, ${r.id})" style="display:block; text-align:center; padding:6px; border-radius:6px; background:#eff6ff; color:#3b82f6; font-size:11.5px; font-weight:600; text-decoration:none;">
+                            <i class="ti ti-eye"></i> Review Request
+                        </a>
+                    </div>
+                `;
+            }
+        }).join('') || '<div style="padding:20px; text-align:center; font-size:12px; color:#999;">No pending notifications.</div>';
 
     } catch (e) {
-        // Silent fail — avoid spamming console on network hiccups
+        // Silent fail
     }
+}
+
+function reviewConsumableRequest(e, id) {
+    e.preventDefault();
+    markNotifAsRead('consumable', id);
+    pollNotifications(); // refresh badge/dropdown counts immediately
+    window.location.href = `{{ route('consumable-requests') }}?highlight=${id}`;
 }
 
 async function approveDeletion(id) {

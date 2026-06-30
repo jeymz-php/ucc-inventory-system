@@ -485,15 +485,34 @@
     </div>
 </div>
 
-{{-- ROW-LEVEL DELETE MODAL --}}
+{{-- STEP 1: SIMPLE YES/NO CONFIRM --}}
+<div class="modal-overlay" id="row-delete-confirm-modal">
+    <div class="modal-box-sm">
+        <div class="modal-header-row">
+            <div class="modal-title-sm"><i class="ti ti-alert-triangle" style="color:var(--red)"></i> Delete Equipment?</div>
+            <button class="modal-close" onclick="closeRowDeleteConfirmModal()"><i class="ti ti-x"></i></button>
+        </div>
+        <p style="font-size:13px; color:#666; margin-bottom:1.25rem; line-height:1.6;">
+            Are you sure you want to delete <strong id="row-delete-confirm-name"></strong>? You'll be asked to confirm one more time.
+        </p>
+        <div style="display:flex; gap:10px;">
+            <button type="button" class="btn-back-link" style="flex:1;" onclick="closeRowDeleteConfirmModal()">Cancel</button>
+            <button type="button" class="modal-btn-primary" style="flex:1; margin:0; background:var(--red);" onclick="proceedToFinalDelete()">
+                <i class="ti ti-check"></i> Yes, Continue
+            </button>
+        </div>
+    </div>
+</div>
+
+{{-- STEP 2: TYPE-TO-CONFIRM DELETE --}}
 <div class="modal-overlay" id="row-delete-modal">
     <div class="modal-box-sm">
         <div class="modal-header-row">
-            <div class="modal-title-sm"><i class="ti ti-trash" style="color:var(--red)"></i> Delete Equipment</div>
+            <div class="modal-title-sm"><i class="ti ti-trash" style="color:var(--red)"></i> Final Confirmation</div>
             <button class="modal-close" onclick="closeRowDeleteModal()"><i class="ti ti-x"></i></button>
         </div>
         <p style="font-size:13px; color:#666; margin-bottom:1rem; line-height:1.6;">
-            This action is <strong>permanent and cannot be undone</strong>. To confirm, type exactly:
+            To confirm, type exactly:
         </p>
         <div style="background:#fff5f5; border:1.5px solid #e24b4a; border-radius:8px; padding:10px 14px; margin-bottom:1rem; font-size:13px; font-weight:600; color:#c0392b; text-align:center;" id="row-delete-expected">
         </div>
@@ -507,6 +526,13 @@
             </button>
         </form>
     </div>
+</div>
+
+{{-- UNDO DELETE TOAST --}}
+<div id="undo-toast" style="display:none; position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#1a1a1a; color:#fff; padding:14px 20px; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.3); z-index:500; align-items:center; gap:14px; font-size:13px;">
+    <span id="undo-toast-text"></span>
+    <button onclick="executeUndo()" style="background:#1a6b3a; color:#fff; border:none; padding:6px 14px; border-radius:6px; font-weight:600; cursor:pointer; font-size:12.5px;">Undo</button>
+    <span id="undo-countdown" style="color:#aaa; font-size:11px; min-width:20px; text-align:center;">10</span>
 </div>
 
 {{-- TRANSFER MODAL --}}
@@ -1101,9 +1127,30 @@ function closeRowCondemnModal() {
     document.getElementById('row-condemn-modal').classList.remove('open');
 }
 
+document.querySelectorAll('.modal-overlay').forEach(o => {
+    o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+</script>
+<script>
+let pendingDeleteType = null;
+let pendingDeleteId = null;
+let pendingDeleteName = null;
+
 function openRowDeleteModal(type, id, name) {
-    document.getElementById('row-delete-expected').textContent = 'Delete ' + name;
-    document.getElementById('row-delete-form').action = `/equipment/${type}/${id}`;
+    pendingDeleteType = type;
+    pendingDeleteId = id;
+    pendingDeleteName = name;
+    document.getElementById('row-delete-confirm-name').textContent = name;
+    document.getElementById('row-delete-confirm-modal').classList.add('open');
+}
+function closeRowDeleteConfirmModal() {
+    document.getElementById('row-delete-confirm-modal').classList.remove('open');
+}
+
+function proceedToFinalDelete() {
+    closeRowDeleteConfirmModal();
+    document.getElementById('row-delete-expected').textContent = 'Delete ' + pendingDeleteName;
+    document.getElementById('row-delete-form').action = `/equipment/${pendingDeleteType}/${pendingDeleteId}`;
     document.getElementById('row-delete-modal').classList.add('open');
 }
 function closeRowDeleteModal() {
@@ -1112,6 +1159,61 @@ function closeRowDeleteModal() {
 
 document.querySelectorAll('.modal-overlay').forEach(o => {
     o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+
+// ── UNDO TOAST ──
+let undoTimer = null;
+let undoSecondsLeft = 10;
+let undoType = null;
+let undoId = null;
+
+function showUndoToast(type, id, name) {
+    undoType = type;
+    undoId = id;
+    undoSecondsLeft = 10;
+
+    document.getElementById('undo-toast-text').textContent = `"${name}" was deleted.`;
+    document.getElementById('undo-countdown').textContent = undoSecondsLeft;
+    document.getElementById('undo-toast').style.display = 'flex';
+
+    clearInterval(undoTimer);
+    undoTimer = setInterval(() => {
+        undoSecondsLeft--;
+        document.getElementById('undo-countdown').textContent = undoSecondsLeft;
+        if (undoSecondsLeft <= 0) {
+            clearInterval(undoTimer);
+            document.getElementById('undo-toast').style.display = 'none';
+        }
+    }, 1000);
+}
+
+async function executeUndo() {
+    clearInterval(undoTimer);
+    document.getElementById('undo-toast').style.display = 'none';
+
+    const res = await fetch(`/equipment/${undoType}/${undoId}/undo-delete`, {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+    });
+
+    if (res.ok) {
+        window.location.reload();
+    } else {
+        const data = await res.json();
+        alert(data.message || 'Could not undo — the item may have already been permanently removed.');
+    }
+}
+
+window.addEventListener('pageshow', function(event) {
+    // event.persisted is true when the page is restored from bfcache (back/forward navigation)
+    if (event.persisted) {
+        document.getElementById('undo-toast').style.display = 'none';
+        return;
+    }
+
+    @if(session('undo_delete'))
+    showUndoToast('{{ session('undo_type') }}', {{ session('undo_id') }}, '{{ addslashes(session('undo_name')) }}');
+    @endif
 });
 </script>
 @endpush

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AccountDeletionRequest;
+use App\Models\ConsumableRequest;
 use Illuminate\Http\Request;
 
 class NotificationController extends Controller
@@ -14,42 +15,79 @@ class NotificationController extends Controller
 
     public function index(Request $request)
     {
+        $tab    = $request->get('tab', 'deletions');
         $status = $request->get('status', 'pending');
 
-        $requests = \App\Models\AccountDeletionRequest::with(['user', 'reviewer'])
+        if ($tab === 'consumables') {
+            $requests = ConsumableRequest::with(['requester', 'reviewer', 'items'])
+                ->when($status !== 'all', fn($q) => $q->where('status', $status))
+                ->latest()
+                ->paginate(15)
+                ->withQueryString();
+
+            $stats = [
+                'pending'  => ConsumableRequest::where('status', 'pending')->count(),
+                'approved' => ConsumableRequest::whereIn('status', ['approved', 'partial'])->count(),
+                'rejected' => ConsumableRequest::where('status', 'rejected')->count(),
+            ];
+
+            return view('pages.notifications', compact('requests', 'stats', 'status', 'tab'));
+        }
+
+        $requests = AccountDeletionRequest::with(['user', 'reviewer'])
             ->when($status !== 'all', fn($q) => $q->where('status', $status))
             ->latest()
             ->paginate(15)
             ->withQueryString();
 
         $stats = [
-            'pending'  => \App\Models\AccountDeletionRequest::where('status', 'pending')->count(),
-            'approved' => \App\Models\AccountDeletionRequest::where('status', 'approved')->count(),
-            'rejected' => \App\Models\AccountDeletionRequest::where('status', 'rejected')->count(),
+            'pending'  => AccountDeletionRequest::where('status', 'pending')->count(),
+            'approved' => AccountDeletionRequest::where('status', 'approved')->count(),
+            'rejected' => AccountDeletionRequest::where('status', 'rejected')->count(),
         ];
 
-        return view('pages.notifications', compact('requests', 'stats', 'status'));
+        return view('pages.notifications', compact('requests', 'stats', 'status', 'tab'));
     }
 
     public function poll()
     {
-        $requests = AccountDeletionRequest::with('user')
+        $deletionRequests = AccountDeletionRequest::with('user')
             ->where('status', 'pending')
             ->latest()
             ->get()
             ->map(function ($r) {
                 return [
+                    'type'       => 'deletion',
                     'id'         => $r->id,
-                    'user_name'  => $r->user->name,
-                    'user_email' => $r->user->email,
+                    'title'      => $r->user->name ?? 'Unknown User',
+                    'subtitle'   => $r->user->email ?? '',
                     'reason'     => $r->reason,
                     'created_at' => $r->created_at->diffForHumans(),
                 ];
             });
 
+        $consumableRequests = ConsumableRequest::with('requester')
+            ->where('status', 'pending')
+            ->latest()
+            ->get()
+            ->map(function ($r) {
+                return [
+                    'type'       => 'consumable',
+                    'id'         => $r->id,
+                    'title'      => $r->reference_no,
+                    'subtitle'   => $r->recipient_name . ' — ' . $r->department,
+                    'reason'     => null,
+                    'created_at' => $r->created_at->diffForHumans(),
+                ];
+            });
+
+        $all = $deletionRequests->concat($consumableRequests)->values();
+
         return response()->json([
-            'count'    => $requests->count(),
-            'requests' => $requests,
+            'count'                => $all->count(),
+            'deletion_count'       => $deletionRequests->count(),
+            'consumable_count'     => $consumableRequests->count(),
+            'requests'             => $all,
         ]);
     }
 

@@ -136,11 +136,47 @@ class EquipmentActionController extends Controller
             return back()->with('error', 'Confirmation text did not match. Equipment was not deleted.');
         }
 
-        $item->delete();
+        $item->delete(); // soft delete now (deleted_at set)
 
-        \App\Models\ActivityLog::record('delete', 'Equipment', "Permanently deleted equipment: {$name}", $type, $id);
+        \App\Models\ActivityLog::record('delete', 'Equipment', "Soft-deleted equipment (pending permanent removal): {$name}", $type, $id);
 
-        return redirect()->route('equipment')->with('success', "\"{$name}\" has been permanently deleted.");
+        return redirect()->route('equipment')->with([
+            'success'        => "\"{$name}\" has been deleted.",
+            'undo_delete'     => true,
+            'undo_type'       => $type,
+            'undo_id'         => $id,
+            'undo_name'       => $name,
+        ]);
+    }
+
+    public function undoDelete(string $type, int $id)
+    {
+        $map = $this->modelMap();
+        if (!isset($map[$type])) abort(404);
+
+        $item = $map[$type]::onlyTrashed()->find($id);
+
+        if (!$item) {
+            return response()->json(['message' => 'This item can no longer be restored (already permanently removed).'], 404);
+        }
+
+        $item->restore();
+
+        \App\Models\ActivityLog::record('restore', 'Equipment', "Undo delete — restored: {$this->displayName($item, $type)}", $type, $item->id);
+
+        return response()->json(['message' => 'Deletion undone successfully.']);
+    }
+
+    public function permanentlyDeleteExpired()
+    {
+        $map = $this->modelMap();
+        $cutoff = now()->subSeconds(10);
+
+        foreach ($map as $modelClass) {
+            $modelClass::onlyTrashed()
+                ->where('deleted_at', '<=', $cutoff)
+                ->forceDelete();
+        }
     }
 
     public function report(string $type, int $id)
@@ -230,10 +266,7 @@ class EquipmentActionController extends Controller
             return back()->with('error', 'No items selected for transfer.');
         }
 
-        $newRemarks = null;
-        if ($request->acc_last || $request->acc_first) {
-            $newRemarks = trim("{$request->acc_last}, {$request->acc_first} " . ($request->acc_mi ? $request->acc_mi . '.' : ''));
-        }
+        $accountable = $this->resolveTransferAccountable($request);
 
         $newCampus   = \App\Models\Campus::find($request->campus_id);
         $newLocation = $request->location_id ? \App\Models\Location::find($request->location_id) : null;
@@ -244,7 +277,6 @@ class EquipmentActionController extends Controller
             [$type, $id] = explode(':', $entry);
             $item = $this->resolveModel($type, (int) $id);
 
-            // Capture "before" snapshot
             $prevCampusName   = $item->campus->name ?? '—';
             $prevLocationName = $item->location->location_name ?? 'Unassigned';
             $prevRemarks      = $item->remarks ?? '—';
@@ -255,15 +287,17 @@ class EquipmentActionController extends Controller
                 'status'      => $request->location_id ? 'assigned' : 'available',
             ];
 
-            if ($newRemarks) {
-                $updateData['remarks'] = $newRemarks;
+            if ($accountable['remarks']) {
+                $updateData['remarks'] = $accountable['remarks'];
+            }
+            if (array_key_exists('assigned_to', $accountable)) {
+                $updateData['assigned_to'] = $accountable['assigned_to'];
             }
 
             $item->update($updateData);
             $name = $this->displayName($item, $type);
             $transferredNames[] = $name;
 
-            // Log a per-item transfer entry with full before/after detail
             \App\Models\ActivityLog::record(
                 'transfer', 'Equipment',
                 "Transferred: {$name}",
@@ -274,12 +308,60 @@ class EquipmentActionController extends Controller
                     'prev_location'    => $prevLocationName,
                     'new_location'     => $newLocation->location_name ?? 'Unassigned',
                     'prev_accountable' => $prevRemarks,
-                    'new_accountable'  => $newRemarks ?? $prevRemarks,
+                    'new_accountable'  => $accountable['remarks'] ?? $prevRemarks,
                 ]
             );
         }
 
         return back()->with('success', count($items) . ' item(s) transferred successfully.');
+    }
+
+    /**
+     * Resolve the new accountable person for a transfer, mirroring
+     * EquipmentController::resolveAccountablePerson() formatting.
+     */
+    private function resolveTransferAccountable(Request $request): array
+    {
+        $accountableType = $request->input('transfer_accountable_type', 'existing');
+
+        $remarks    = null;
+        $assignedTo = null;
+
+        if ($accountableType === 'existing' && $request->filled('user_id')) {
+            $assignedTo = $request->input('user_id');
+            $user = \App\Models\User::find($assignedTo);
+
+            if ($user && !empty($user->name)) {
+                $fullName = trim($user->name);
+
+                if ($fullName === 'System Administrator' || $fullName === 'Administrator') {
+                    $remarks = $fullName;
+                } else {
+                    $nameParts = explode(' ', $fullName);
+                    if (count($nameParts) > 1) {
+                        $lastName  = array_pop($nameParts);
+                        $firstName = implode(' ', $nameParts);
+                        $remarks   = $lastName . ', ' . $firstName;
+                    } else {
+                        $remarks = $fullName;
+                    }
+                }
+            }
+        } elseif ($accountableType === 'manual' && $request->filled('acc_first') && $request->filled('acc_last')) {
+            $lastName  = trim($request->input('acc_last'));
+            $firstName = trim($request->input('acc_first'));
+            $mi        = trim($request->input('acc_mi'));
+
+            $remarks = $lastName . ', ' . $firstName;
+            if (!empty($mi)) {
+                $remarks .= ' ' . rtrim($mi, '.') . '.';
+            }
+        }
+
+        return [
+            'remarks'     => $remarks,
+            'assigned_to' => $assignedTo,
+        ];
     }
 
     public function bulkReport(Request $request)

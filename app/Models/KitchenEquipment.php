@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class KitchenEquipment extends Model
 {
+    use SoftDeletes;
+    
     protected $table = 'kitchen_equipment';
     protected $guarded = [];
 

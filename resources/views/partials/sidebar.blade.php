@@ -2,7 +2,9 @@
 
     {{-- Brand --}}
     <div class="sidebar-brand">
-        <div class="brand-icon"><i class="ti ti-package"></i></div>
+        <div class="brand-icon">
+            <img src="{{ asset('images/ucc.png') }}" alt="UCC Logo" style="width:100%; height:100%; object-fit:contain; border-radius:8px;">
+        </div>
         <div>
             <div class="brand-text-main">UCC Inventory</div>
             <div class="brand-text-sub">Management System</div>

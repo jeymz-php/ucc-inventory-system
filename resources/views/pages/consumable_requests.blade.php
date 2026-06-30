@@ -42,7 +42,7 @@
             </thead>
             <tbody>
                 @forelse($requests as $req)
-                <tr>
+                <tr id="req-row-{{ $req->id }}">
                     <td style="font-size:12px; font-weight:600;">{{ $req->reference_no }}</td>
                     <td>
                         <div class="cell-primary">{{ $req->recipient_name }}</div>
@@ -124,26 +124,62 @@
 
 {{-- EDIT REQUEST MODAL --}}
 <div class="modal-overlay" id="edit-request-modal">
-    <div class="modal-box-lg" style="max-width:600px;">
-        <div class="modal-header-row">
-            <div class="modal-title-sm"><i class="ti ti-edit"></i> Edit Request Group</div>
+    <div class="modal-box-lg" style="max-width:700px;">
+        <div class="modal-header-row" style="background:#3b82f6; margin:-1.5rem -1.5rem 1.25rem; padding:1.1rem 1.5rem; border-radius:14px 14px 0 0;">
+            <div class="modal-title-sm" style="color:#fff;"><i class="ti ti-edit"></i> Edit Request Group: <span id="er-ref-no"></span></div>
             <button class="modal-close" onclick="document.getElementById('edit-request-modal').classList.remove('open');"><i class="ti ti-x"></i></button>
         </div>
         <form method="POST" id="edit-request-form">
             @csrf @method('PUT')
-            <div class="modal-grid">
-                <div class="modal-form-group"><div class="modal-label">Recipient First Name *</div><input type="text" name="recipient_first_name" id="er-first" class="modal-input" required></div>
-                <div class="modal-form-group"><div class="modal-label">Recipient Last Name *</div><input type="text" name="recipient_last_name" id="er-last" class="modal-input" required></div>
+
+            <div class="detail-section-title"><i class="ti ti-user"></i> Recipient Details</div>
+            <div class="modal-grid" style="margin-bottom:1rem;">
+                <div class="modal-form-group" style="margin:0;"><div class="modal-label">Recipient Name *</div><input type="text" id="er-name-display" class="modal-input" disabled style="background:#fafafa;"></div>
+                <div class="modal-form-group" style="margin:0;"><div class="modal-label">Office/Department *</div><input type="text" name="department" id="er-dept" class="modal-input" required></div>
             </div>
-            <div class="modal-form-group"><div class="modal-label">Office/Department *</div><input type="text" name="department" id="er-dept" class="modal-input" required></div>
-            <div class="modal-grid">
-                <div class="modal-form-group"><div class="modal-label">Approved By</div><input type="text" name="approved_by" id="er-approved" class="modal-input"></div>
-                <div class="modal-form-group"><div class="modal-label">Supply Officer</div><input type="text" name="supply_officer" id="er-supply" class="modal-input"></div>
+            <input type="hidden" name="recipient_first_name" id="er-first">
+            <input type="hidden" name="recipient_last_name" id="er-last">
+            <input type="hidden" name="recipient_mi" id="er-mi">
+
+            <div class="detail-section-title" style="margin-top:1.25rem;"><i class="ti ti-list"></i> Requested Items</div>
+            <table class="data-table" style="margin-bottom:1rem;">
+                <thead><tr><th>Item</th><th style="width:90px;">Quantity</th><th>Purpose</th><th style="width:110px;">Status</th></tr></thead>
+                <tbody id="er-items-body"></tbody>
+            </table>
+
+            <div class="detail-section-title"><i class="ti ti-signature"></i> Signatories</div>
+            <div class="modal-grid" style="grid-template-columns: 1fr 1fr 1fr; margin-top:0.5rem;">
+                <div class="modal-form-group" style="margin:0;"><div class="modal-label">Approved By</div><input type="text" name="approved_by" id="er-approved" class="modal-input"></div>
+                <div class="modal-form-group" style="margin:0;"><div class="modal-label">Supply Officer</div><input type="text" name="supply_officer" id="er-supply" class="modal-input"></div>
+                <div class="modal-form-group" style="margin:0;">
+                    <div class="modal-label">Group Status</div>
+                    <select name="status" id="er-status" class="modal-input">
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                        <option value="partial">Partial</option>
+                    </select>
+                </div>
             </div>
-            <button type="submit" class="modal-btn-primary"><i class="ti ti-device-floppy"></i> Update Request</button>
+
+            <div style="display:flex; gap:10px; margin-top:1.5rem;">
+                <button type="button" class="btn-back-link" style="flex:1;" onclick="document.getElementById('edit-request-modal').classList.remove('open');">Cancel</button>
+                <button type="submit" class="modal-btn-primary" style="flex:1; margin:0; background:#3b82f6;"><i class="ti ti-device-floppy"></i> Update Request</button>
+            </div>
         </form>
     </div>
 </div>
+
+<style>
+@keyframes highlightFlash {
+    0%   { background: #fff3cd; }
+    50%  { background: #fff3cd; }
+    100% { background: transparent; }
+}
+.row-highlight-flash td {
+    animation: highlightFlash 3.5s ease-out;
+}
+</style>
 
 @endsection
 
@@ -217,21 +253,76 @@ async function openCheckModal(id) {
     document.getElementById('check-modal').classList.add('open');
 }
 
-async function openEditRequestModal(id) {
-    const res = await fetch(`/consumable-requests/${id}`);
-    const req = await res.json();
+let availableConsumablesCache = null;
 
+async function getAvailableConsumables() {
+    if (availableConsumablesCache) return availableConsumablesCache;
+    const res = await fetch('{{ route("consumable-requests.available-items") }}');
+    availableConsumablesCache = await res.json();
+    return availableConsumablesCache;
+}
+
+async function openEditRequestModal(id) {
+    const [reqRes, items] = await Promise.all([
+        fetch(`/consumable-requests/${id}`).then(r => r.json()),
+        getAvailableConsumables()
+    ]);
+    const req = reqRes;
+
+    document.getElementById('er-ref-no').textContent = req.reference_no;
+    document.getElementById('er-name-display').value = `${req.recipient_first_name} ${req.recipient_mi || ''} ${req.recipient_last_name}`.replace(/\s+/g, ' ').trim();
     document.getElementById('er-first').value = req.recipient_first_name;
     document.getElementById('er-last').value = req.recipient_last_name;
+    document.getElementById('er-mi').value = req.recipient_mi ?? '';
     document.getElementById('er-dept').value = req.department;
     document.getElementById('er-approved').value = req.approved_by ?? '';
     document.getElementById('er-supply').value = req.supply_officer ?? '';
+    document.getElementById('er-status').value = req.status;
     document.getElementById('edit-request-form').action = `/consumable-requests/${id}`;
+
+    const itemOptions = (selectedId) => items.map(it =>
+        `<option value="${it.id}" ${it.id === selectedId ? 'selected' : ''}>${it.item_name} (Available: ${it.current_stock} ${it.unit})</option>`
+    ).join('');
+
+    document.getElementById('er-items-body').innerHTML = req.items.map((i, idx) => `
+        <tr>
+            <td>
+                <input type="hidden" name="items[${idx}][id]" value="${i.id}">
+                <select name="items[${idx}][consumable_id]" class="modal-input" style="padding:6px 8px; font-size:12px;">
+                    ${itemOptions(i.consumable_id)}
+                </select>
+            </td>
+            <td><input type="number" min="1" name="items[${idx}][quantity]" value="${i.quantity}" class="modal-input" style="padding:6px 8px; font-size:12px;"></td>
+            <td><input type="text" name="items[${idx}][purpose]" value="${i.purpose ?? ''}" class="modal-input" style="padding:6px 8px; font-size:12px;" placeholder="Office use"></td>
+            <td>
+                <select name="items[${idx}][status]" class="modal-input" style="padding:6px 8px; font-size:12px;">
+                    <option value="pending" ${i.status === 'pending' ? 'selected' : ''}>Pending</option>
+                    <option value="approved" ${i.status === 'approved' ? 'selected' : ''}>Approved</option>
+                    <option value="rejected" ${i.status === 'rejected' ? 'selected' : ''}>Rejected</option>
+                </select>
+            </td>
+        </tr>
+    `).join('');
+
     document.getElementById('edit-request-modal').classList.add('open');
 }
 
 document.querySelectorAll('.modal-overlay').forEach(o => {
     o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+
+// ── HIGHLIGHT ROW FROM NOTIFICATION CLICK ──
+document.addEventListener('DOMContentLoaded', function() {
+    const params = new URLSearchParams(window.location.search);
+    const highlightId = params.get('highlight');
+    if (highlightId) {
+        const row = document.getElementById('req-row-' + highlightId);
+        if (row) {
+            row.classList.add('row-highlight-flash');
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => row.classList.remove('row-highlight-flash'), 3500);
+        }
+    }
 });
 </script>
 @endpush

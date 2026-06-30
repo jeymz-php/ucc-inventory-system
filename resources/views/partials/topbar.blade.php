@@ -38,18 +38,18 @@
         <div style="position:relative;">
             <a href="#" class="topbar-btn" title="Notifications" onclick="event.preventDefault(); toggleNotifDropdown();">
                 <i class="ti ti-bell"></i>
-                <span id="notif-badge" style="display:none; position:absolute; top:-4px; right:-4px; background:#e24b4a; color:#fff; font-size:10px; font-weight:700; border-radius:50%; width:18px; height:18px; align-items:center; justify-content:center; display:flex;">0</span>
+                <span id="notif-badge" style="display:none; position:absolute; top:-4px; right:-4px; background:#e24b4a; color:#fff; font-size:10px; font-weight:700; border-radius:50%; width:18px; height:18px; align-items:center; justify-content:center;">0</span>
             </a>
 
-            <div id="notif-dropdown" class="settings-dropdown" style="width:340px;">
+            <div id="notif-dropdown" class="settings-dropdown" style="width:360px;">
                 <div class="settings-header" style="display:flex; align-items:center; justify-content:space-between;">
                     <div>
                         <div class="settings-user-name">Notifications</div>
-                        <div class="settings-user-email" id="notif-summary">No pending requests</div>
+                        <div class="settings-user-email" id="notif-summary">No pending notifications</div>
                     </div>
                     <a href="{{ route('notifications.index') }}" style="font-size:11px; color:var(--green-dark); font-weight:600; text-decoration:none;">View All →</a>
                 </div>
-                <div id="notif-list" style="max-height:320px; overflow-y:auto;"></div>
+                <div id="notif-list" style="max-height:360px; overflow-y:auto;"></div>
             </div>
         </div>
         @endif

@@ -146,6 +146,7 @@ Route::middleware(['auth', 'role:admin,superadmin'])->group(function () {
     Route::delete('/equipment/{type}/{id}',                           [EquipmentActionController::class, 'destroy'])->name('equipment.destroy');
     Route::post('/equipment/{type}/{id}/restore',                     [EquipmentActionController::class, 'restore'])->name('equipment.restore');
     Route::post('/equipment/{type}/{id}/waste',                       [EquipmentActionController::class, 'transferToWaste'])->name('equipment.waste');
+    Route::post('/equipment/{type}/{id}/undo-delete', [EquipmentActionController::class, 'undoDelete'])->name('equipment.undo-delete');
 
     // Equipment articles
     Route::get('/equipment-articles',                                 [EquipmentArticleController::class, 'index'])->name('equipment.articles.index');
@@ -164,6 +165,7 @@ Route::middleware(['auth', 'role:admin,superadmin'])->group(function () {
     Route::put('/consumables/{consumable}',                           [ConsumablesController::class, 'update'])->name('consumables.update');
     Route::delete('/consumables/{consumable}',                        [ConsumablesController::class, 'destroy'])->name('consumables.destroy');
     Route::post('/consumable-requests/{consumableRequest}/review',    [ConsumableRequestController::class, 'review'])->name('consumable-requests.review');
+    Route::get('/consumable-requests-available-items',                [ConsumableRequestController::class, 'availableItems'])->name('consumable-requests.available-items');
 
     // Users
     Route::get('/users',                                              [UserManagementController::class, 'index'])->name('users');

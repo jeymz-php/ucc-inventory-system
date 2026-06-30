@@ -144,12 +144,92 @@ class ConsumableRequestController extends Controller
             'department'           => 'required|string|max:150',
             'approved_by'          => 'nullable|string|max:150',
             'supply_officer'       => 'nullable|string|max:150',
+            'status'               => 'required|in:pending,approved,rejected,partial',
+            'items'                => 'required|array|min:1',
+            'items.*.id'           => 'required|exists:consumable_request_items,id',
+            'items.*.quantity'     => 'required|integer|min:1',
+            'items.*.purpose'      => 'required|string|max:255',
+            'items.*.status'       => 'required|in:pending,approved,rejected',  
         ]);
+
+        $authUser = auth()->user();
 
         $consumableRequest->update($request->only([
             'recipient_last_name', 'recipient_first_name', 'recipient_mi',
             'department', 'approved_by', 'supply_officer',
         ]));
+
+        foreach ($request->items as $itemData) {
+            $item = ConsumableRequestItem::find($itemData['id]']);
+            if (!$item || $item->consumable_request_id !== $consumableRequest->id) continue;
+
+            $wasApproved = $item->status === 'approved';
+            $isNowApproved = $itemData['status'] === 'approved';
+
+            if ($wasApproved && $isNowApproved && $item->quantity != $itemData['quantity']) {
+                $diff = $itemData['quantity'] - $item->quantity;
+                $consumable = $item->consumable;
+                $previous = $consumable->current_stock;
+                $newTotal = max(0, $previous - $diff);
+
+                $consumable->update(['current_stock' => $newTotal]);
+
+                ConsumableStockLog::create([
+                    'consumable_id'  => $consumable->id,
+                    'action'         => 'adjustment',
+                    'change_amount'  => -$diff,
+                    'previous_total' => $previous,
+                    'new_total'      => $newTotal,
+                    'user_id'        => $authUser->id,
+                ]);
+            }
+
+            if (!$wasApproved && $isNowApproved) {
+                $item->quantity = $itemData['quantity'];
+                $this->deductStock($item, $authUser);
+            }
+
+            if (!$wasApproved && $isNowApproved) {
+                $consumable = $item->consumable;
+                $previous = $consumable->current_stock;
+                $newTotal = max(0, $previous - $itemData['quantity']);
+
+                $consumable->update(['current_stock' => $newTotal]);
+
+                ConsumableStockLog::create([
+                    'consumable_id'  => $consumable->id,
+                    'action'         => 'deduction',
+                    'change_amount'  => -$itemData['quantity'],
+                    'previous_total' => $previous,
+                    'new_total'      => $newTotal,
+                    'user_id'        => $authUser->id,
+                ]);
+            }
+
+            $item->update([
+                'consumable_id'   => $itemData['consumable_id'],
+                'quantity'        => $itemData['quantity'],
+                'purpose'         => $itemData['purpose'],
+                'status'          => $itemData['status'],
+            ]);
+        }
+
+        $items = $consumableRequest->fresh()->items;
+        $allApproved = $items->every(fn($i) => $i->status === 'approved');
+        $allRejected = $items->every(fn($i) => $i->status === 'rejected');
+
+        $finalStatus = $request->status;
+        if ($finalStatus === 'approved' && !$allApproved && !$allRejected) {
+            $finalStatus = 'partial';
+        }
+
+        $consumableRequest->update([
+            'status'      => $finalStatus,
+            'reviewed_by' => $authUser->id,
+            'reviewed_at' => now(),
+        ]);
+
+        ActivityLog::record('update', 'Consumables', "Updated request {$consumableRequest->reference_no}"); 
 
         return back()->with('success', 'Request updated successfully.');
     }
@@ -185,5 +265,11 @@ class ConsumableRequestController extends Controller
         $pdf = \PDF::loadView('pdf.consumable_release_report', compact('consumableRequest', 'headerLogoBase64', 'footerLogoBase64'));
 
         return $pdf->stream('Release-Report-' . $consumableRequest->reference_no . '.pdf');
+    }
+
+    public function availableItems()
+    {
+        $items = Consumable::orderBy('item_name')->get(['id', 'item_name', 'unit', 'current_stock']);
+        return response()->json($items);
     }
 }

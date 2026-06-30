@@ -90,3 +90,13 @@ June 30, 2026
 - Equipment assigned to existed UCC - IMS user implemented
 - Accountable Person type implemented in Admin/Super Admin side
 - Consumable Release report updated, updated of header logo
+
+July 1, 2026 - Part I
+
+- Real-time notification of requesting consumable item from User side implemented
+- Modified/updated editing of requested consumable item from Admin/Super Admin
+- Fixed issue of transferring inventory from Admin/Super Admin, can select existed UCC - IMS user account
+- Consumable Requests added/implemented in Notifications page of Admin/Super Admin
+- Improvised User side of UCC - IMS, unlike originated UCC - IMS that don't have User side
+- Modified deletion of equipment item by adding a double validation, can undo in 10 seconds before it deletes permanently
+- Logo from sidebar changed to actual UCC Logo
