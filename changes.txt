@@ -100,3 +100,16 @@ July 1, 2026 - Part I
 - Improvised User side of UCC - IMS, unlike originated UCC - IMS that don't have User side
 - Modified deletion of equipment item by adding a double validation, can undo in 10 seconds before it deletes permanently
 - Logo from sidebar changed to actual UCC Logo
+
+July 1, 2026 - Part II
+
+- Notifications page from Admin/Super Admin merged into one notifications, from separated account deletion and consumable requests
+- Cart in Consumable for User side remain visible, even the added items are remain inside the cart
+- Blank Receipt added to generate blank receipt report in case of handwritten receipt
+
+July 2, 2026 - Part I
+
+- Accounts created from IMS and CS implemented to sure that IMS/CS are can only logged in IMS/CS (still need to fix error encountered)
+- Accounts created from CS can manage Admin/Super Admin from IMS
+- Accounts now can put in "pending" status for security purposes, Admin/Super Admin from IMS can approve that (also in creating accounts from IMS)
+- Account created from IMS and CS can now receive thru email, also the approved account

@@ -97,10 +97,16 @@ Route::middleware('auth')->group(function () {
 
     // Consumable requests (all users)
     Route::get('/consumable-requests',                                [ConsumableRequestController::class, 'index'])->name('consumable-requests');
-    Route::get('/consumable-requests/{consumableRequest}',            [ConsumableRequestController::class, 'show'])->name('consumable-requests.show');
+    // Constrain consumableRequest to numeric IDs so static admin routes (e.g. blank-report) are not shadowed
+    Route::get('/consumable-requests/{consumableRequest}',            [ConsumableRequestController::class, 'show'])
+        ->where('consumableRequest', '[0-9]+')
+        ->name('consumable-requests.show');
     Route::post('/consumable-requests',                               [ConsumableRequestController::class, 'store'])->name('consumable-requests.store');
     Route::put('/consumable-requests/{consumableRequest}',            [ConsumableRequestController::class, 'update'])->name('consumable-requests.update');
     Route::get('/consumable-requests/{consumableRequest}/report', [ConsumableRequestController::class, 'report'])->name('consumable-requests.report');
+
+    // Temporary debug route for blank report (auth-only) to help diagnose 404s
+    Route::get('/consumable-requests/blank-report-debug', [ConsumableRequestController::class, 'blankReport'])->name('consumable-requests.blank-report-debug');
 
     // User assigned equipment (regular users only)
     Route::get('/my-equipment',                              [MyEquipmentController::class, 'index'])->name('my-equipment');
@@ -165,6 +171,7 @@ Route::middleware(['auth', 'role:admin,superadmin'])->group(function () {
     Route::put('/consumables/{consumable}',                           [ConsumablesController::class, 'update'])->name('consumables.update');
     Route::delete('/consumables/{consumable}',                        [ConsumablesController::class, 'destroy'])->name('consumables.destroy');
     Route::post('/consumable-requests/{consumableRequest}/review',    [ConsumableRequestController::class, 'review'])->name('consumable-requests.review');
+    Route::get('/consumable-requests/blank-report',                   [ConsumableRequestController::class, 'blankReport'])->name('consumable-requests.blank-report');
     Route::get('/consumable-requests-available-items',                [ConsumableRequestController::class, 'availableItems'])->name('consumable-requests.available-items');
 
     // Users
@@ -173,6 +180,7 @@ Route::middleware(['auth', 'role:admin,superadmin'])->group(function () {
     Route::post('/users',                                             [UserManagementController::class, 'store'])->name('users.store');
     Route::put('/users/{user}',                                       [UserManagementController::class, 'update'])->name('users.update');
     Route::delete('/users/{user}',                                    [UserManagementController::class, 'destroy'])->name('users.destroy');
+    Route::patch('/users/{user}/approve', [UserManagementController::class, 'approve'])->name('users.approve');
     Route::patch('/users/{user}/archive',                             [UserManagementController::class, 'archive'])->name('users.archive');
 
     // Notifications

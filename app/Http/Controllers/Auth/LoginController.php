@@ -22,16 +22,30 @@ class LoginController extends Controller
     {
         $this->validateLogin($request);
 
-        $credentials = $this->credentials($request);
-
-        if (Auth::attempt($credentials, $request->boolean('remember'))) {
+        if (Auth::attempt($this->credentials($request), $request->boolean('remember'))) {
             $user = Auth::user();
 
-            if (!$user->is_active) {
-                // Don't fully log out yet — keep them authenticated only long enough to confirm reactivation
-                $request->session()->put('pending_reactivation_user_id', $user->id);
+            // Block CS accounts from logging into IMS
+            if ($user->source === 'cs') {
                 Auth::logout();
+                return back()->withErrors([
+                    'email' => 'This account was created in the Consumable Management System. Please log in there instead.',
+                ])->withInput($request->only('email', 'remember'));
+            }
 
+            // Block pending accounts
+            if ($user->status === 'pending') {
+                Auth::logout();
+                return back()->withErrors([
+                    'email' => 'Your account is pending approval by an administrator. You will be notified once approved.',
+                ])->withInput($request->only('email', 'remember'))
+                  ->with('show_pending', true);
+            }
+
+            // Block deactivated accounts
+            if (!$user->is_active) {
+                Auth::logout();
+                $request->session()->put('pending_reactivation_user_id', $user->id);
                 return redirect()->route('login')->with('show_reactivate_modal', true);
             }
 

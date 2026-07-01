@@ -15,38 +15,73 @@ class NotificationController extends Controller
 
     public function index(Request $request)
     {
-        $tab    = $request->get('tab', 'deletions');
         $status = $request->get('status', 'pending');
+        $type   = $request->get('type', 'all');
 
-        if ($tab === 'consumables') {
-            $requests = ConsumableRequest::with(['requester', 'reviewer', 'items'])
-                ->when($status !== 'all', fn($q) => $q->where('status', $status))
-                ->latest()
-                ->paginate(15)
-                ->withQueryString();
+        // Fetch deletion requests
+        $deletions = \App\Models\AccountDeletionRequest::with(['user', 'reviewer'])
+            ->when($status !== 'all', fn($q) => $q->where('status', $status))
+            ->get()
+            ->map(fn($r) => [
+                'id'          => $r->id,
+                'type'        => 'deletion',
+                'title'       => $r->user->name ?? 'Deleted User',
+                'subtitle'    => $r->user->email ?? '—',
+                'detail'      => $r->reason,
+                'status'      => $r->status,
+                'reviewed_by' => $r->reviewer->name ?? '—',
+                'created_at'  => $r->created_at,
+                'raw'         => $r,
+            ]);
 
-            $stats = [
-                'pending'  => ConsumableRequest::where('status', 'pending')->count(),
-                'approved' => ConsumableRequest::whereIn('status', ['approved', 'partial'])->count(),
-                'rejected' => ConsumableRequest::where('status', 'rejected')->count(),
-            ];
+        // Fetch consumable requests
+        $consumables = \App\Models\ConsumableRequest::with(['requester', 'reviewer', 'items'])
+            ->when($status !== 'all', fn($q) => $q->where('status', $status))
+            ->get()
+            ->map(fn($r) => [
+                'id'          => $r->id,
+                'type'        => 'consumable',
+                'title'       => $r->reference_no,
+                'subtitle'    => $r->recipient_name . ' — ' . $r->department,
+                'detail'      => $r->items->count() . ' item(s)',
+                'status'      => $r->status,
+                'reviewed_by' => $r->reviewer->name ?? '—',
+                'created_at'  => $r->created_at,
+                'raw'         => $r,
+            ]);
 
-            return view('pages.notifications', compact('requests', 'stats', 'status', 'tab'));
+        // Merge and sort by latest first
+        if ($type === 'deletion') {
+            $merged = $deletions;
+        } elseif ($type === 'consumable') {
+            $merged = $consumables;
+        } else {
+            $merged = $deletions->concat($consumables);
         }
 
-        $requests = AccountDeletionRequest::with(['user', 'reviewer'])
-            ->when($status !== 'all', fn($q) => $q->where('status', $status))
-            ->latest()
-            ->paginate(15)
-            ->withQueryString();
+        $merged = $merged->sortByDesc('created_at')->values();
+
+        // Manual pagination
+        $perPage     = 15;
+        $currentPage = $request->get('page', 1);
+        $paginated   = new \Illuminate\Pagination\LengthAwarePaginator(
+            $merged->slice(($currentPage - 1) * $perPage, $perPage)->values(),
+            $merged->count(),
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
 
         $stats = [
-            'pending'  => AccountDeletionRequest::where('status', 'pending')->count(),
-            'approved' => AccountDeletionRequest::where('status', 'approved')->count(),
-            'rejected' => AccountDeletionRequest::where('status', 'rejected')->count(),
+            'pending'  => $deletions->where('status', 'pending')->count()
+                        + $consumables->where('status', 'pending')->count(),
+            'approved' => $deletions->where('status', 'approved')->count()
+                        + $consumables->whereIn('status', ['approved', 'partial'])->count(),
+            'rejected' => $deletions->where('status', 'rejected')->count()
+                        + $consumables->where('status', 'rejected')->count(),
         ];
 
-        return view('pages.notifications', compact('requests', 'stats', 'status', 'tab'));
+        return view('pages.notifications', compact('paginated', 'stats', 'status', 'type'));
     }
 
     public function poll()

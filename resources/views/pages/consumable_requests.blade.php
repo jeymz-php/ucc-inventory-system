@@ -26,7 +26,14 @@
 </div>
 
 <div class="card">
-    <div class="card-header"><div class="card-title"><i class="ti ti-clipboard-list"></i> Requests ({{ $requests->total() }})</div></div>
+    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+        <div class="card-title"><i class="ti ti-clipboard-list"></i> Requests ({{ $requests->total() }})</div>
+        @if(in_array(auth()->user()->role, ['admin','superadmin']))
+        <a href="{{ route('consumable-requests.blank-report') }}" target="_blank" class="modal-btn-primary" style="margin:0; padding:8px 12px; font-size:12px;">
+            <i class="ti ti-receipt"></i> Generate Blank Receipt Report
+        </a>
+        @endif
+    </div>
     <div class="data-table-wrap">
         <table class="data-table">
             <thead>
@@ -71,6 +78,11 @@
                             @if(in_array($req->status, ['approved', 'partial']))
                             <a href="{{ route('consumable-requests.report', $req->id) }}" target="_blank" class="table-icon-btn" style="background:#f4f0ff; color:#7c3aed;" title="Generate Report">
                                 <i class="ti ti-file-text"></i>
+                            </a>
+                            @endif
+                            @if(in_array(auth()->user()->role, ['admin','superadmin']))
+                            <a href="{{ route('consumable-requests.blank-report') }}" target="_blank" class="table-icon-btn" style="background:#ecfeff; color:#0f766e;" title="Generate Blank Receipt Report">
+                                <i class="ti ti-receipt"></i>
                             </a>
                             @endif
                             <button class="table-icon-btn edit" title="Edit" onclick="openEditRequestModal({{ $req->id }})"><i class="ti ti-edit"></i></button>

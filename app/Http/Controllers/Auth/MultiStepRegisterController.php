@@ -105,13 +105,15 @@ class MultiStepRegisterController extends Controller
             'phone'         => $request->phone,
             'campus_id'     => $request->campus_id,
             'department_id' => $request->department_id,
-            'password'      => Hash::make($request->password),
+            'password'      => \Illuminate\Support\Facades\Hash::make($request->password),
             'role'          => 'user',
+            'source'        => 'ims',
+            'status'        => 'pending',
+            'is_active'     => true,
         ]);
 
-        // ✅ Don't login yet — redirect to login with success message
         return response()->json([
-            'message'  => 'Account created successfully.',
+            'message'  => 'Account created. Pending administrator approval.',
             'redirect' => route('login', ['registered' => true]),
         ]);
     }

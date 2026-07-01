@@ -16,6 +16,26 @@ class ConsumableRequestController extends Controller
         $this->middleware('auth');
     }
 
+    public function parseRecipientName(?string $fullName): array
+    {
+        $trimmedName = trim((string) $fullName);
+
+        if ($trimmedName === '') {
+            return ['first_name' => '', 'last_name' => ''];
+        }
+
+        $nameParts = preg_split('/\s+/', $trimmedName) ?: [$trimmedName];
+
+        if (count($nameParts) === 1) {
+            return ['first_name' => $trimmedName, 'last_name' => ''];
+        }
+
+        $lastName = array_pop($nameParts);
+        $firstName = implode(' ', $nameParts);
+
+        return ['first_name' => $firstName, 'last_name' => $lastName];
+    }
+
     public function index(Request $request)
     {
         $status = $request->get('status', 'all');
@@ -49,11 +69,12 @@ class ConsumableRequestController extends Controller
 
         $authUser    = auth()->user();
         $autoApprove = in_array($authUser->role, ['admin', 'superadmin']);
+        $recipientName = $this->parseRecipientName($authUser->name);
 
         $consumableRequest = ConsumableRequest::create([
             'reference_no'         => ConsumableRequest::generateReferenceNo(),
-            'recipient_last_name'  => explode(' ', $authUser->name)[count(explode(' ', $authUser->name)) - 1] ?? $authUser->name,
-            'recipient_first_name' => explode(' ', $authUser->name)[0] ?? $authUser->name,
+            'recipient_last_name'  => $recipientName['last_name'],
+            'recipient_first_name' => $recipientName['first_name'],
             'recipient_mi'         => null,
             'campus_id'            => $authUser->campus_id,
             'department'           => $authUser->department->department_name ?? 'N/A',
@@ -160,7 +181,7 @@ class ConsumableRequestController extends Controller
         ]));
 
         foreach ($request->items as $itemData) {
-            $item = ConsumableRequestItem::find($itemData['id]']);
+            $item = ConsumableRequestItem::find($itemData['id']);
             if (!$item || $item->consumable_request_id !== $consumableRequest->id) continue;
 
             $wasApproved = $item->status === 'approved';
@@ -256,15 +277,72 @@ class ConsumableRequestController extends Controller
     {
         $consumableRequest->load(['items.consumable', 'campus', 'requester']);
 
-        $headerLogoPath = public_path('images/ucc.png');
-        $headerLogoBase64 = file_exists($headerLogoPath) ? 'data:image/png;base64,' . base64_encode(file_get_contents($headerLogoPath)) : null;
-
-        $footerLogoPath = public_path('images/caloocannewlogo.png');
-        $footerLogoBase64 = file_exists($footerLogoPath) ? 'data:image/png;base64,' . base64_encode(file_get_contents($footerLogoPath)) : null;
-
-        $pdf = \PDF::loadView('pdf.consumable_release_report', compact('consumableRequest', 'headerLogoBase64', 'footerLogoBase64'));
+        $payload = $this->buildReportPayload($consumableRequest, false);
+        $pdf = \PDF::loadView('pdf.consumable_release_report', $payload);
 
         return $pdf->stream('Release-Report-' . $consumableRequest->reference_no . '.pdf');
+    }
+
+    public function blankReport()
+    {
+        $payload = $this->buildReportPayload(null, true);
+        $pdf = \PDF::loadView('pdf.consumable_release_report', $payload);
+
+        return $pdf->stream('Blank-Consumable-Release-Receipt.pdf');
+    }
+
+    private function buildReportPayload(?ConsumableRequest $consumableRequest, bool $blankReceipt): array
+    {
+        $publicRoot = dirname(__DIR__, 3) . '/public';
+        $headerLogoPath = $publicRoot . '/images/ucc.png';
+        $headerLogoBase64 = file_exists($headerLogoPath) ? 'data:image/png;base64,' . base64_encode(file_get_contents($headerLogoPath)) : null;
+
+        $footerLogoPath = $publicRoot . '/images/caloocannewlogo.png';
+        $footerLogoBase64 = file_exists($footerLogoPath) ? 'data:image/png;base64,' . base64_encode(file_get_contents($footerLogoPath)) : null;
+
+        $request = $consumableRequest;
+
+        if ($blankReceipt) {
+            $request = new class {
+                public $reference_no = '';
+                public $recipient_first_name = '';
+                public $recipient_last_name = '';
+                public $recipient_mi = '';
+                public $department = '';
+                public $approved_by = '';
+                public $supply_officer = '';
+                public $request_date;
+                public $items;
+                public $campus;
+                public $requester;
+
+                public function __construct()
+                {
+                    $this->request_date = now();
+                    $this->items = collect([]);
+                    $this->campus = null;
+                    $this->requester = new class {
+                        public $name = '';
+                    };
+                }
+
+                public function getRecipientNameAttribute(): string
+                {
+                    return trim("{$this->recipient_first_name} {$this->recipient_mi} {$this->recipient_last_name}");
+                }
+            };
+        } else {
+            $request->loadMissing(['items.consumable', 'campus', 'requester']);
+        }
+
+        return [
+            'consumableRequest' => $request,
+            'headerLogoBase64' => $headerLogoBase64,
+            'footerLogoBase64' => $footerLogoBase64,
+            'blankReceipt' => $blankReceipt,
+            'referenceNo' => $blankReceipt ? '' : ($request->reference_no ?? ''),
+            'recipientName' => $blankReceipt ? '' : ($request->recipient_name ?? ''),
+        ];
     }
 
     public function availableItems()

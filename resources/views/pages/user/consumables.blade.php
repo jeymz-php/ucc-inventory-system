@@ -112,7 +112,7 @@
         </div>
 
         @if($canRequest)
-        <button class="user-item-btn btn-can-request" onclick="addToCart({{ $item->id }}, '{{ addslashes($item->item_name) }}', '{{ $item->unit }}', {{ $item->current_stock }})">
+        <button class="user-item-btn btn-can-request" onclick="addToCart({{ $item->id }}, '{{ addslashes($item->item_name) }}', '{{ $item->unit }}', {{ $item->current_stock }}, '{{ $isOut ? 'out' : ($item->status === 'critical' ? 'critical' : 'available') }}')">
             <i class="ti ti-shopping-cart-plus"></i> Add to Request
         </button>
         @else
@@ -130,7 +130,7 @@
 </div>
 
 {{-- Floating Cart Button --}}
-<button class="floating-cart-btn" id="floating-cart-btn" onclick="openCartModal()" style="display:none;">
+<button class="floating-cart-btn" id="floating-cart-btn" onclick="openCartModal()" style="display:flex;">
     <i class="ti ti-shopping-cart"></i>
     <span class="cart-count-badge" id="cart-count-badge">0</span>
 </button>
@@ -275,33 +275,69 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 @endif
 <script>
-let cart = {}; // { id: { name, unit, max, qty } }
+let cart = {}; // { id: { name, unit, max, qty, purpose, stockStatus } }
+const CART_STORAGE_KEY = 'user_consumable_cart';
+
+function saveCart() {
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+}
+
+function loadCart() {
+    try {
+        const saved = localStorage.getItem(CART_STORAGE_KEY);
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed && typeof parsed === 'object') {
+                cart = parsed;
+            }
+        }
+    } catch (e) {
+        console.warn('Could not load cart from storage', e);
+        cart = {};
+    }
+}
 
 function updateCartUI() {
+    saveCart();
     const count = Object.keys(cart).length;
     const btn = document.getElementById('floating-cart-btn');
     document.getElementById('cart-count-badge').textContent = count;
-    btn.style.display = count > 0 ? 'flex' : 'none';
+    btn.style.display = 'flex';
 
     document.querySelectorAll('.user-item-card').forEach(card => {
         // re-evaluated when modal closes via refresh logic below if needed
     });
 }
 
-function addToCart(id, name, unit, maxStock) {
+function addToCart(id, name, unit, maxStock, stockStatus = 'available') {
+    const isLocked = stockStatus === 'critical' || stockStatus === 'out';
+
     if (cart[id]) {
-        if (cart[id].qty < maxStock) cart[id].qty++;
+        if (!isLocked && cart[id].qty < maxStock) {
+            cart[id].qty++;
+        }
     } else {
-        cart[id] = { name, unit, max: maxStock, qty: 1, purpose: '' };
+        cart[id] = { name, unit, max: maxStock, qty: 1, purpose: '', stockStatus, locked: isLocked };
     }
+
+    cart[id].name = name;
+    cart[id].unit = unit;
+    cart[id].max = maxStock;
+    cart[id].stockStatus = stockStatus;
+    cart[id].locked = isLocked;
+
     updateCartUI();
 
-    const btn = event.target.closest('button');
-    btn.innerHTML = '<i class="ti ti-check"></i> Added!';
-    btn.classList.add('in-cart');
-    setTimeout(() => {
-        btn.innerHTML = `<i class="ti ti-shopping-cart-plus"></i> Add Another (${cart[id].qty} in cart)`;
-    }, 700);
+    const btn = event?.target?.closest('button');
+    if (btn) {
+        btn.innerHTML = isLocked ? '<i class="ti ti-lock"></i> In cart' : '<i class="ti ti-check"></i> Added!';
+        btn.classList.add('in-cart');
+        setTimeout(() => {
+            btn.innerHTML = isLocked
+                ? '<i class="ti ti-lock"></i> In cart'
+                : `<i class="ti ti-shopping-cart-plus"></i> Add Another (${cart[id].qty} in cart)`;
+        }, 700);
+    }
 }
 
 function openCartModal() {
@@ -316,20 +352,24 @@ function openCartModal() {
         document.getElementById('cart-submit-btn').disabled = false;
         list.innerHTML = `
             <div class="detail-section-title" style="margin-bottom:0.75rem;"><i class="ti ti-list"></i> Items Requested</div>
-            ${Object.entries(cart).map(([id, item]) => `
-                <div class="cart-row" style="flex-wrap:wrap;">
-                    <div style="display:flex; align-items:center; gap:10px; width:100%; margin-bottom:6px;">
-                        <div class="cart-row-name" style="flex:1;">${item.name}</div>
-                        <div class="cart-row-qty"><input type="number" min="1" max="${item.max}" value="${item.qty}" onchange="updateCartQty(${id}, this.value)"></div>
-                        <div style="font-size:11px; color:#888;">${item.unit}</div>
-                        <button type="button" class="cart-row-remove" onclick="removeFromCart(${id})"><i class="ti ti-trash"></i></button>
+            ${Object.entries(cart).map(([id, item]) => {
+                const isLocked = item.stockStatus === 'critical' || item.stockStatus === 'out';
+                return `
+                    <div class="cart-row" style="flex-wrap:wrap;">
+                        <div style="display:flex; align-items:center; gap:10px; width:100%; margin-bottom:6px;">
+                            <div class="cart-row-name" style="flex:1;">${item.name}</div>
+                            <div class="cart-row-qty"><input type="number" min="1" max="${item.max}" value="${item.qty}" ${isLocked ? 'disabled' : ''} onchange="updateCartQty(${id}, this.value)"></div>
+                            <div style="font-size:11px; color:#888;">${item.unit}</div>
+                            <button type="button" class="cart-row-remove" onclick="removeFromCart(${id})"><i class="ti ti-trash"></i></button>
+                        </div>
+                        ${isLocked ? '<div style="width:100%; font-size:11px; color:#c2410c;">Quantity is locked for critical or out-of-stock items. You can only remove it from the cart.</div>' : ''}
+                        <input type="text" id="purpose-input-${id}" placeholder="Purpose (e.g. Office use, Clinic use...)" required
+                               class="modal-input" style="width:100%; padding:8px 10px; font-size:12.5px;"
+                               value="${item.purpose || ''}"
+                               oninput="cart[${id}].purpose = this.value; syncHiddenInputs();">
                     </div>
-                    <input type="text" id="purpose-input-${id}" placeholder="Purpose (e.g. Office use, Clinic use...)" required
-                           class="modal-input" style="width:100%; padding:8px 10px; font-size:12.5px;"
-                           value="${item.purpose || ''}"
-                           oninput="cart[${id}].purpose = this.value; syncHiddenInputs();">
-                </div>
-            `).join('')}
+                `;
+            }).join('')}
         `;
 
         syncHiddenInputs();
@@ -348,10 +388,20 @@ function syncHiddenInputs() {
 }
 
 function updateCartQty(id, val) {
+    if (!cart[id]) return;
+
+    const item = cart[id];
+    if (item.locked || item.stockStatus === 'critical' || item.stockStatus === 'out') {
+        item.qty = Math.max(1, parseInt(item.qty) || 1);
+        openCartModal();
+        return;
+    }
+
     val = parseInt(val);
     if (val < 1) val = 1;
     if (val > cart[id].max) val = cart[id].max;
     cart[id].qty = val;
+    updateCartUI();
     openCartModal();
 }
 
@@ -377,6 +427,9 @@ function filterItems() {
 
     document.getElementById('user-no-results').style.display = visibleCount === 0 ? 'block' : 'none';
 }
+
+loadCart();
+updateCartUI();
 
 document.getElementById('user-cons-search').addEventListener('input', filterItems);
 document.querySelectorAll('.user-stock-pill').forEach(pill => {

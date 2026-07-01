@@ -17,12 +17,19 @@
             <div class="hero-chip"><span>Pending Requests</span>{{ $stats['pending_requests'] }}</div>
         </div>
     </div>
-    <div class="hero-right" style="display:flex; gap:8px;">
+    <div class="hero-right" style="display:flex; gap:8px; align-items:center;">
         <a href="#" class="btn-add" onclick="event.preventDefault(); openRequestModal();"><i class="ti ti-shopping-cart"></i> Request</a>
         @if(in_array($role, ['admin','superadmin']))
         <a href="#" class="btn-add" onclick="event.preventDefault(); openAddItemModal();"><i class="ti ti-plus"></i> Add Item</a>
         @endif
         <a href="{{ route('consumables.reports') }}" class="btn-add"><i class="ti ti-file-text"></i> Report</a>
+
+        {{-- Single Blank Receipt button (admin only) --}}
+        @if(in_array($role, ['admin','superadmin']))
+            <a href="{{ route('consumable-requests.blank-report') }}" target="_blank" class="btn-add">
+                <i class="ti ti-receipt"></i> Blank Receipt
+            </a>
+        @endif
     </div>
 </div>
 
@@ -253,16 +260,21 @@
             <div class="modal-title-sm" style="color:#fff;"><i class="ti ti-shopping-cart"></i> Request Multiple Items</div>
             <button class="modal-close" onclick="document.getElementById('request-modal').classList.remove('open');"><i class="ti ti-x"></i></button>
         </div>
+        @php
+            $nameParts = preg_split('/\s+/', trim(auth()->user()->name)) ?: [trim(auth()->user()->name)];
+            $defaultFirstName = count($nameParts) > 1 ? implode(' ', array_slice($nameParts, 0, -1)) : ($nameParts[0] ?? '');
+            $defaultLastName = count($nameParts) > 1 ? $nameParts[count($nameParts) - 1] : '';
+        @endphp
         <form method="POST" action="{{ route('consumable-requests.store') }}">
             @csrf
             <div class="modal-grid">
                 <div class="modal-form-group">
                     <div class="modal-label">Last Name *</div>
-                    <input type="text" name="recipient_last_name" class="modal-input" placeholder="e.g. Dela Cruz" required value="{{ explode(' ', auth()->user()->name)[count(explode(' ', auth()->user()->name))-1] ?? '' }}">
+                    <input type="text" name="recipient_last_name" class="modal-input" placeholder="e.g. Dela Cruz" required value="{{ $defaultLastName }}">
                 </div>
                 <div class="modal-form-group">
                     <div class="modal-label">First Name *</div>
-                    <input type="text" name="recipient_first_name" class="modal-input" placeholder="e.g. Juan" required value="{{ explode(' ', auth()->user()->name)[0] ?? '' }}">
+                    <input type="text" name="recipient_first_name" class="modal-input" placeholder="e.g. Juan" required value="{{ $defaultFirstName }}">
                 </div>
             </div>
             <div class="modal-form-group" style="max-width:140px;">

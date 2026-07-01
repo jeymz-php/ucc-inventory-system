@@ -23,11 +23,11 @@ class UserManagementController extends Controller
         $statusFilter = $request->get('status');
 
         $query = User::with(['campus', 'department'])
-            ->when($search, fn($q) => $q->where('name', 'like', "%$search%")
-                ->orWhere('email', 'like', "%$search%"))
+            ->when($search, fn($q) => $q->where('name', 'like', "%$search%")->orWhere('email', 'like', "%$search%"))
             ->when($roleFilter, fn($q) => $q->where('role', $roleFilter))
-            ->when($statusFilter !== null && $statusFilter !== '', 
-                fn($q) => $q->where('is_active', $statusFilter));
+            ->when($request->get('status') === 'pending', fn($q) => $q->where('status', 'pending'))
+            ->when($request->get('status') === 'active', fn($q) => $q->where('status', 'active'))
+            ->when($request->get('status') === '0', fn($q) => $q->where('is_active', false));
 
         // Admin cannot see superadmin accounts
         if ($authUser->role === 'admin') {
@@ -163,5 +163,18 @@ class UserManagementController extends Controller
         $user->delete();
 
         return back()->with('success', 'User account deleted permanently.');
+    }
+
+    public function approve(User $user)
+    {
+        $user->update(['status' => 'active']);
+
+        // Notify the user by email
+        \Illuminate\Support\Facades\Mail::to($user->email)
+            ->send(new \App\Mail\AccountApprovedMail($user));
+
+        \App\Models\ActivityLog::record('activate', 'User', "Approved account: {$user->email} (source: {$user->source})", 'user', $user->id);
+
+        return back()->with('success', "{$user->name}'s account has been approved.");
     }
 }

@@ -63,7 +63,7 @@
             <td class="header-text-cell">
                 <div class="header-title">UNIVERSITY OF CALOOCAN CITY</div>
                 <div class="header-sub">CONSUMABLE MANAGEMENT SYSTEM</div>
-                <div class="header-doc-title">OFFICIAL CONSUMABLE RELEASE REPORT</div>
+                <div class="header-doc-title">{{ $blankReceipt ?? false ? 'CONSUMABLE RECEIPT REPORT' : 'OFFICIAL CONSUMABLE RELEASE REPORT' }}</div>
             </td>
         </tr>
     </table>
@@ -71,23 +71,23 @@
     <table class="info-table">
         <tr>
             <td class="label">Ref No.:</td>
-            <td class="value">{{ $consumableRequest->reference_no }}</td>
+            <td class="value">{{ $blankReceipt ?? false ? '' : $consumableRequest->reference_no }}</td>
             <td class="label">Date:</td>
-            <td class="value">{{ $consumableRequest->request_date->format('M d, Y') }}</td>
+            <td class="value">{{ $blankReceipt ?? false ? '' : $consumableRequest->request_date->format('M d, Y') }}</td>
             <td class="label">Total:</td>
             <td class="value">{{ $consumableRequest->items->count() }} items</td>
         </tr>
         <tr>
             <td class="label">Recipient:</td>
-            <td class="value">{{ $consumableRequest->recipient_name }}</td>
+            <td class="value">{{ $blankReceipt ?? false ? '' : $consumableRequest->recipient_name }}</td>
             <td class="label">Office:</td>
-            <td class="value" colspan="3">{{ $consumableRequest->department }}</td>
+            <td class="value" colspan="3">{{ $blankReceipt ?? false ? '' : $consumableRequest->department }}</td>
         </tr>
         <tr>
             <td class="label">Approved By:</td>
-            <td class="value">{{ $consumableRequest->approved_by }}</td>
+            <td class="value">{{ $blankReceipt ?? false ? '' : $consumableRequest->approved_by }}</td>
             <td class="label">Supply Officer:</td>
-            <td class="value" colspan="3">{{ $consumableRequest->supply_officer }}</td>
+            <td class="value" colspan="3">{{ $blankReceipt ?? false ? '' : $consumableRequest->supply_officer }}</td>
         </tr>
     </table>
 
@@ -103,7 +103,7 @@
         </thead>
         <tbody>
             @php $approvedItems = $consumableRequest->items->where('status', 'approved'); @endphp
-            @for($i = 0; $i < max(10, $approvedItems->count()); $i++)
+            @for($i = 0; $i < ($blankReceipt ?? false ? 10 : max(10, $approvedItems->count())); $i++)
             @php $item = $approvedItems->values()->get($i); @endphp
             <tr>
                 <td class="num">{{ $i + 1 }}</td>
@@ -115,7 +115,7 @@
             @endfor
             <tr class="total-row">
                 <td colspan="2">TOTAL ITEMS:</td>
-                <td class="num">{{ $approvedItems->sum('quantity') }}</td>
+                <td class="num">{{ $blankReceipt ?? false ? '' : $approvedItems->sum('quantity') }}</td>
                 <td colspan="2"></td>
             </tr>
         </tbody>
@@ -125,19 +125,19 @@
         <div class="sig-col">
             <div class="sig-label-top" style="text-align:left;">Requested by:</div>
             <div class="sig-line"></div>
-            <div class="sig-name">{{ strtoupper($consumableRequest->requester->name ?? $consumableRequest->recipient_name) }}</div>
+            <div class="sig-name">{{ $blankReceipt ?? false ? '' : strtoupper($consumableRequest->requester->name ?? $consumableRequest->recipient_name) }}</div>
             <div class="sig-role">Signature</div>
         </div>
         <div class="sig-col">
             <div class="sig-label-top" style="text-align:left;">Approved by:</div>
             <div class="sig-line"></div>
-            <div class="sig-name">{{ $consumableRequest->approved_by }}</div>
+            <div class="sig-name">{{ $blankReceipt ?? false ? '' : $consumableRequest->approved_by }}</div>
             <div class="sig-role">AVP for Administration</div>
         </div>
         <div class="sig-col">
             <div class="sig-label-top" style="text-align:left;">Released by:</div>
             <div class="sig-line"></div>
-            <div class="sig-name">{{ $consumableRequest->supply_officer }}</div>
+            <div class="sig-name">{{ $blankReceipt ?? false ? '' : $consumableRequest->supply_officer }}</div>
             <div class="sig-role">Supply Officer</div>
         </div>
     </div>
@@ -145,7 +145,7 @@
     <div class="received-section">
         <div class="received-label">Received by:</div>
         <div class="received-line"></div>
-        <div class="sig-name">{{ strtoupper($consumableRequest->recipient_name) }}</div>
+        <div class="sig-name">{{ $blankReceipt ?? false ? '' : strtoupper($consumableRequest->recipient_name) }}</div>
         <div class="sig-role">Signature</div>
     </div>
 
@@ -153,7 +153,7 @@
 
     <div class="footer">
         <div class="footer-table">
-            <div class="footer-cell footer-left">Ref: {{ $consumableRequest->reference_no }}</div>
+            <div class="footer-cell footer-left">Ref: {{ $blankReceipt ?? false ? '' : $consumableRequest->reference_no }}</div>
             <div class="footer-cell footer-center">{{ now()->format('Y-m-d h:i A') }}</div>
             <div class="footer-cell footer-right">
                 @if($footerLogoBase64)<img src="{{ $footerLogoBase64 }}" class="footer-logo">@endif

@@ -24,6 +24,10 @@
         </div>
     </div>
     <div class="stat-card">
+        <div class="stat-icon orange"><i class="ti ti-clock"></i></div>
+        <div><div class="stat-value">{{ $users->getCollection()->where('status', 'pending')->count() }}</div><div class="stat-label">Pending Approval</div></div>
+    </div>
+    <div class="stat-card">
         <div class="stat-icon orange"><i class="ti ti-shield"></i></div>
         <div>
             <div class="stat-value">{{ $users->getCollection()->whereIn('role', ['admin','superadmin'])->count() }}</div>
@@ -65,7 +69,8 @@
                 <select name="status" style="padding:7px 12px; border:1.5px solid var(--border);
                         border-radius:8px; font-size:13px; font-family:inherit; outline:none;">
                     <option value="">All Status</option>
-                    <option value="1" {{ request('status') === '1' ? 'selected' : '' }}>Active</option>
+                    <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
+                    <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>Pending</option>
                     <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Archived</option>
                 </select>
 
@@ -94,6 +99,7 @@
                     <th>Campus</th>
                     <th>Department</th>
                     <th>Status</th>
+                    <th>Source</th>
                     <th>Joined</th>
                     <th>Actions</th>
                 </tr>
@@ -121,10 +127,19 @@
                     <td style="font-size:12px;">{{ $user->campus->name ?? '—' }}</td>
                     <td style="font-size:12px;">{{ $user->department->department_name ?? '—' }}</td>
                     <td>
-                        @if($user->is_active)
+                        @if($user->status === 'pending')
+                            <span class="chip-badge" style="background:#fff8f0; color:#ef9f27;"><i class="ti ti-clock" style="font-size:10px"></i> Pending</span>
+                        @elseif($user->is_active)
                             <span class="status-badge active">Active</span>
                         @else
                             <span class="status-badge archived">Archived</span>
+                        @endif
+                    </td>
+                    <td>
+                        @if($user->source === 'cs')
+                            <span class="chip-badge chip-campus"><i class="ti ti-package" style="font-size:10px"></i> CS</span>
+                        @else
+                            <span class="chip-badge chip-type"><i class="ti ti-device-desktop" style="font-size:10px"></i> IMS</span>
                         @endif
                     </td>
                     <td style="font-size:12px; color:var(--text-muted);">
@@ -137,6 +152,16 @@
                             <a href="{{ route('users.show', $user) }}" class="btn-icon-action blue" title="View">
                                 <i class="ti ti-eye"></i>
                             </a>
+
+                            @if($user->status === 'pending')
+                            <form method="POST" action="{{ route('users.approve', $user) }}" style="display:inline">
+                                @csrf @method('PATCH')
+                                <button type="submit" class="btn-icon-action green" title="Approve Account"
+                                        onclick="return confirm('Approve this account?')">
+                                    <i class="ti ti-check"></i>
+                                </button>
+                            </form>
+                            @endif
 
                             {{-- Edit --}}
                             @if(!($authRole === 'admin' && $user->role === 'superadmin'))
