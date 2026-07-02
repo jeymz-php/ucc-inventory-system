@@ -15,16 +15,21 @@ class SystemStatusController extends Controller
 
     public function index()
     {
-        $current  = SystemStatus::with('changedBy')->latest()->first();
-        $history  = SystemStatus::with('changedBy')->latest()->take(10)->get();
-        $logs     = SystemLog::with('user')->latest()->paginate(20);
+        $currentIms  = SystemStatus::current('ims');
+        $currentCs   = SystemStatus::current('cs');
+
+        $historyIms  = SystemStatus::where('system', 'ims')->with('changedBy')->latest()->take(5)->get();
+        $historyCs   = SystemStatus::where('system', 'cs')->with('changedBy')->latest()->take(5)->get();
+
+        $logs         = SystemLog::with('user')->latest()->paginate(20);
         $errorCount   = SystemLog::where('type', 'error')->where('is_resolved', false)->count();
         $warningCount = SystemLog::where('type', 'warning')->where('is_resolved', false)->count();
         $totalLogs    = SystemLog::count();
 
         return view('pages.system_status', compact(
-            'current', 'history', 'logs',
-            'errorCount', 'warningCount', 'totalLogs'
+            'currentIms', 'currentCs',
+            'historyIms', 'historyCs',
+            'logs', 'errorCount', 'warningCount', 'totalLogs'
         ));
     }
 
@@ -32,12 +37,15 @@ class SystemStatusController extends Controller
     {
         $request->validate([
             'reason' => 'required|string|max:500',
+            'system' => 'required|in:ims,cs',
         ]);
 
-        $current   = SystemStatus::current();
+        $system    = $request->system;
+        $current   = SystemStatus::current($system);
         $newStatus = $current?->status === 'up' ? 'down' : 'up';
 
         SystemStatus::create([
+            'system'     => $system,
             'status'     => $newStatus,
             'reason'     => $request->reason,
             'changed_by' => auth()->id(),
@@ -46,7 +54,7 @@ class SystemStatusController extends Controller
 
         SystemLog::create([
             'type'       => 'info',
-            'title'      => 'System Status Changed to ' . strtoupper($newStatus),
+            'title'      => strtoupper($system) . ' System Status Changed to ' . strtoupper($newStatus),
             'message'    => "Reason: {$request->reason}",
             'url'        => request()->fullUrl(),
             'method'     => 'POST',
@@ -55,9 +63,10 @@ class SystemStatusController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
-        $msg = $newStatus === 'down'
-            ? 'System is now DOWN. Users will see the maintenance page.'
-            : 'System is back UP. All users can now access the system.';
+        $label = $system === 'cs' ? 'UCC-CS (Consumable System)' : 'UCC-IMS (Inventory System)';
+        $msg   = $newStatus === 'down'
+            ? "{$label} is now DOWN. Users will see the maintenance page."
+            : "{$label} is back UP. All users can now access the system.";
 
         return back()->with('success', $msg);
     }

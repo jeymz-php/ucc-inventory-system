@@ -312,11 +312,11 @@
 
         {{-- SUCCESS BANNER (shown after registration) --}}
         @if(request()->has('registered'))
-        <div class="alert-success">
+        <div class="alert alert-success">
             <i class="ti ti-circle-check"></i>
-            <div class="alert-success-text">
+            <div class="alert-text">
                 <strong>Account created successfully!</strong>
-                You can now log in with your email and password.
+                Your account is pending administrator approval. You will be notified via email once approved.
             </div>
         </div>
         @endif

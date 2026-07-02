@@ -113,3 +113,8 @@ July 2, 2026 - Part I
 - Accounts created from CS can manage Admin/Super Admin from IMS
 - Accounts now can put in "pending" status for security purposes, Admin/Super Admin from IMS can approve that (also in creating accounts from IMS)
 - Account created from IMS and CS can now receive thru email, also the approved account
+
+July 2, 2026 - Part II
+
+- System Status of Both Systems are upgraded, updated UI and including the system of CS can now set to SYSTEM DOWN anytime
+- IMS users will see the account pending after logging the new registered IMS user account, for security purposes

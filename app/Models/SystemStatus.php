@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class SystemStatus extends Model
 {
     protected $table    = 'system_status';
-    protected $fillable = ['status', 'reason', 'resolved_by', 'changed_by', 'changed_at'];
+    protected $fillable = ['system', 'status', 'reason', 'resolved_by', 'changed_by', 'changed_at'];
     protected $dates    = ['changed_at'];
 
     public function changedBy()
@@ -15,13 +15,14 @@ class SystemStatus extends Model
         return $this->belongsTo(User::class, 'changed_by');
     }
 
-    public static function current()
+    // Get current status for a specific system ('ims' or 'cs')
+    public static function current(string $system = 'ims')
     {
-        return static::latest()->first();
+        return static::where('system', $system)->latest()->first();
     }
 
-    public static function isDown()
+    public static function isDown(string $system = 'ims'): bool
     {
-        return static::current()?->status === 'down';
+        return static::current($system)?->status === 'down';
     }
 }

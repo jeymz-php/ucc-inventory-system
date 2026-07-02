@@ -16,35 +16,55 @@ class ConsumableRequestController extends Controller
         $this->middleware('auth');
     }
 
+    /**
+     * Parse a full name into first_name, last_name, and mi.
+     * Handles Filipino names: "Juan Dela Cruz" → first: Juan, last: Dela Cruz
+     * Also handles: "Maria Santos" → first: Maria, last: Santos
+     *               "Jose P. Rizal" → first: Jose, mi: P., last: Rizal
+     */
     public function parseRecipientName(?string $fullName): array
     {
-        $trimmedName = trim((string) $fullName);
+        $trimmed = trim((string) $fullName);
 
-        if ($trimmedName === '') {
-            return ['first_name' => '', 'last_name' => ''];
+        if ($trimmed === '') {
+            return ['first_name' => '', 'mi' => null, 'last_name' => ''];
         }
 
-        $nameParts = preg_split('/\s+/', $trimmedName) ?: [$trimmedName];
+        $parts = preg_split('/\s+/', $trimmed);
 
-        if (count($nameParts) === 1) {
-            return ['first_name' => $trimmedName, 'last_name' => ''];
+        if (count($parts) === 1) {
+            return ['first_name' => $trimmed, 'mi' => null, 'last_name' => ''];
         }
 
-        $lastName = array_pop($nameParts);
-        $firstName = implode(' ', $nameParts);
+        // Last part is always last name
+        $lastName  = array_pop($parts);
 
-        return ['first_name' => $firstName, 'last_name' => $lastName];
+        // Check if second-to-last is a middle initial (1-2 chars ending with optional period)
+        $mi = null;
+        if (count($parts) >= 2) {
+            $possibleMi = end($parts);
+            if (preg_match('/^[A-Za-z]{1,2}\.?$/', $possibleMi)) {
+                $mi = array_pop($parts) . (str_ends_with($possibleMi, '.') ? '' : '.');
+            }
+        }
+
+        $firstName = implode(' ', $parts);
+
+        return [
+            'first_name' => $firstName,
+            'mi'         => $mi,
+            'last_name'  => $lastName,
+        ];
     }
 
     public function index(Request $request)
     {
-        $status = $request->get('status', 'all');
+        $status   = $request->get('status', 'all');
         $authUser = auth()->user();
 
         $query = ConsumableRequest::with(['items.consumable', 'campus', 'requester', 'reviewer'])
             ->when($status !== 'all', fn($q) => $q->where('status', $status));
 
-        // Regular users only see their own requests
         if ($authUser->role === 'user') {
             $query->where('requested_by', $authUser->id);
         }
@@ -61,21 +81,21 @@ class ConsumableRequestController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'items'                => 'required|array|min:1',
-            'items.*.consumable_id'=> 'required|exists:consumables,id',
-            'items.*.quantity'     => 'required|integer|min:1',
-            'items.*.purpose'      => 'required|string|max:255',
+            'items'                 => 'required|array|min:1',
+            'items.*.consumable_id' => 'required|exists:consumables,id',
+            'items.*.quantity'      => 'required|integer|min:1',
+            'items.*.purpose'       => 'required|string|max:255',
         ]);
 
-        $authUser    = auth()->user();
-        $autoApprove = in_array($authUser->role, ['admin', 'superadmin']);
-        $recipientName = $this->parseRecipientName($authUser->name);
+        $authUser      = auth()->user();
+        $autoApprove   = in_array($authUser->role, ['admin', 'superadmin']);
+        $parsed        = $this->parseRecipientName($authUser->name);
 
         $consumableRequest = ConsumableRequest::create([
             'reference_no'         => ConsumableRequest::generateReferenceNo(),
-            'recipient_last_name'  => $recipientName['last_name'],
-            'recipient_first_name' => $recipientName['first_name'],
-            'recipient_mi'         => null,
+            'recipient_first_name' => $parsed['first_name'],
+            'recipient_mi'         => $parsed['mi'],
+            'recipient_last_name'  => $parsed['last_name'],
             'campus_id'            => $authUser->campus_id,
             'department'           => $authUser->department->department_name ?? 'N/A',
             'request_date'         => now(),
@@ -85,6 +105,7 @@ class ConsumableRequestController extends Controller
             'requested_by'         => $authUser->id,
             'reviewed_by'          => $autoApprove ? $authUser->id : null,
             'reviewed_at'          => $autoApprove ? now() : null,
+            'source'               => 'ims',
         ]);
 
         foreach ($request->items as $itemData) {
@@ -104,10 +125,14 @@ class ConsumableRequestController extends Controller
         ActivityLog::record(
             $autoApprove ? 'create_approved' : 'create',
             'Consumables',
-            "Submitted consumable request {$consumableRequest->reference_no}" . ($autoApprove ? ' (auto-approved)' : ' (pending review)')
+            "Submitted consumable request {$consumableRequest->reference_no}" .
+            ($autoApprove ? ' (auto-approved)' : ' (pending review)') . ' [source: IMS]'
         );
 
-        return back()->with('success', "Request {$consumableRequest->reference_no} submitted" . ($autoApprove ? ' and approved automatically.' : ' and is pending review.'));
+        return back()->with('success',
+            "Request {$consumableRequest->reference_no} submitted" .
+            ($autoApprove ? ' and approved automatically.' : ' and is pending review.')
+        );
     }
 
     public function show(ConsumableRequest $consumableRequest)
@@ -116,17 +141,16 @@ class ConsumableRequestController extends Controller
         return response()->json($consumableRequest);
     }
 
-    // Admin/Super Admin reviews each item: approve or reject
     public function review(Request $request, ConsumableRequest $consumableRequest)
     {
         $request->validate([
-            'items'                  => 'required|array',
-            'items.*.id'             => 'required|exists:consumable_request_items,id',
-            'items.*.decision'       => 'required|in:approved,rejected',
+            'items'                    => 'required|array',
+            'items.*.id'               => 'required|exists:consumable_request_items,id',
+            'items.*.decision'         => 'required|in:approved,rejected',
             'items.*.rejection_reason' => 'nullable|string|max:500',
         ]);
 
-        $authUser = auth()->user();
+        $authUser    = auth()->user();
         $allApproved = true;
         $allRejected = true;
 
@@ -135,7 +159,9 @@ class ConsumableRequestController extends Controller
 
             $item->update([
                 'status'           => $itemData['decision'],
-                'rejection_reason' => $itemData['decision'] === 'rejected' ? ($itemData['rejection_reason'] ?? null) : null,
+                'rejection_reason' => $itemData['decision'] === 'rejected'
+                    ? ($itemData['rejection_reason'] ?? null)
+                    : null,
             ]);
 
             if ($itemData['decision'] === 'approved') {
@@ -152,7 +178,9 @@ class ConsumableRequestController extends Controller
             'reviewed_at' => now(),
         ]);
 
-        ActivityLog::record('review', 'Consumables', "Reviewed request {$consumableRequest->reference_no}: {$consumableRequest->status}");
+        ActivityLog::record('review', 'Consumables',
+            "Reviewed request {$consumableRequest->reference_no}: {$consumableRequest->status}"
+        );
 
         return back()->with('success', 'Request reviewed successfully.');
     }
@@ -167,10 +195,11 @@ class ConsumableRequestController extends Controller
             'supply_officer'       => 'nullable|string|max:150',
             'status'               => 'required|in:pending,approved,rejected,partial',
             'items'                => 'required|array|min:1',
-            'items.*.id'           => 'required|exists:consumable_request_items,id',
+            'items.*.id'           => 'nullable|exists:consumable_request_items,id',
+            'items.*.consumable_id'=> 'required|exists:consumables,id',
             'items.*.quantity'     => 'required|integer|min:1',
-            'items.*.purpose'      => 'required|string|max:255',
-            'items.*.status'       => 'required|in:pending,approved,rejected',  
+            'items.*.purpose'      => 'nullable|string|max:255',
+            'items.*.status'       => 'required|in:pending,approved,rejected',
         ]);
 
         $authUser = auth()->user();
@@ -181,20 +210,22 @@ class ConsumableRequestController extends Controller
         ]));
 
         foreach ($request->items as $itemData) {
+            if (empty($itemData['id'])) continue;
+
             $item = ConsumableRequestItem::find($itemData['id']);
             if (!$item || $item->consumable_request_id !== $consumableRequest->id) continue;
 
-            $wasApproved = $item->status === 'approved';
+            $wasApproved   = $item->status === 'approved';
             $isNowApproved = $itemData['status'] === 'approved';
 
+            // Quantity change on already-approved item → adjust stock
             if ($wasApproved && $isNowApproved && $item->quantity != $itemData['quantity']) {
-                $diff = $itemData['quantity'] - $item->quantity;
+                $diff       = $itemData['quantity'] - $item->quantity;
                 $consumable = $item->consumable;
-                $previous = $consumable->current_stock;
-                $newTotal = max(0, $previous - $diff);
+                $previous   = $consumable->current_stock;
+                $newTotal   = max(0, $previous - $diff);
 
                 $consumable->update(['current_stock' => $newTotal]);
-
                 ConsumableStockLog::create([
                     'consumable_id'  => $consumable->id,
                     'action'         => 'adjustment',
@@ -205,22 +236,23 @@ class ConsumableRequestController extends Controller
                 ]);
             }
 
+            // Newly approved → deduct stock
             if (!$wasApproved && $isNowApproved) {
                 $item->quantity = $itemData['quantity'];
                 $this->deductStock($item, $authUser);
             }
 
-            if (!$wasApproved && $isNowApproved) {
+            // Was approved, now un-approved → restock
+            if ($wasApproved && !$isNowApproved) {
                 $consumable = $item->consumable;
-                $previous = $consumable->current_stock;
-                $newTotal = max(0, $previous - $itemData['quantity']);
+                $previous   = $consumable->current_stock;
+                $newTotal   = $previous + $item->quantity;
 
                 $consumable->update(['current_stock' => $newTotal]);
-
                 ConsumableStockLog::create([
                     'consumable_id'  => $consumable->id,
-                    'action'         => 'deduction',
-                    'change_amount'  => -$itemData['quantity'],
+                    'action'         => 'adjustment',
+                    'change_amount'  => $item->quantity,
                     'previous_total' => $previous,
                     'new_total'      => $newTotal,
                     'user_id'        => $authUser->id,
@@ -228,14 +260,14 @@ class ConsumableRequestController extends Controller
             }
 
             $item->update([
-                'consumable_id'   => $itemData['consumable_id'],
-                'quantity'        => $itemData['quantity'],
-                'purpose'         => $itemData['purpose'],
-                'status'          => $itemData['status'],
+                'consumable_id' => $itemData['consumable_id'],
+                'quantity'      => $itemData['quantity'],
+                'purpose'       => $itemData['purpose'] ?? null,
+                'status'        => $itemData['status'],
             ]);
         }
 
-        $items = $consumableRequest->fresh()->items;
+        $items       = $consumableRequest->fresh()->items;
         $allApproved = $items->every(fn($i) => $i->status === 'approved');
         $allRejected = $items->every(fn($i) => $i->status === 'rejected');
 
@@ -250,7 +282,9 @@ class ConsumableRequestController extends Controller
             'reviewed_at' => now(),
         ]);
 
-        ActivityLog::record('update', 'Consumables', "Updated request {$consumableRequest->reference_no}"); 
+        ActivityLog::record('update', 'Consumables',
+            "Edited request {$consumableRequest->reference_no}"
+        );
 
         return back()->with('success', 'Request updated successfully.');
     }
@@ -276,10 +310,8 @@ class ConsumableRequestController extends Controller
     public function report(ConsumableRequest $consumableRequest)
     {
         $consumableRequest->load(['items.consumable', 'campus', 'requester']);
-
         $payload = $this->buildReportPayload($consumableRequest, false);
         $pdf = \PDF::loadView('pdf.consumable_release_report', $payload);
-
         return $pdf->stream('Release-Report-' . $consumableRequest->reference_no . '.pdf');
     }
 
@@ -287,30 +319,33 @@ class ConsumableRequestController extends Controller
     {
         $payload = $this->buildReportPayload(null, true);
         $pdf = \PDF::loadView('pdf.consumable_release_report', $payload);
-
         return $pdf->stream('Blank-Consumable-Release-Receipt.pdf');
     }
 
     private function buildReportPayload(?ConsumableRequest $consumableRequest, bool $blankReceipt): array
     {
-        $publicRoot = dirname(__DIR__, 3) . '/public';
-        $headerLogoPath = $publicRoot . '/images/ucc.png';
-        $headerLogoBase64 = file_exists($headerLogoPath) ? 'data:image/png;base64,' . base64_encode(file_get_contents($headerLogoPath)) : null;
+        $publicRoot       = dirname(__DIR__, 3) . '/public';
+        $headerLogoPath   = $publicRoot . '/images/ucc.png';
+        $headerLogoBase64 = file_exists($headerLogoPath)
+            ? 'data:image/png;base64,' . base64_encode(file_get_contents($headerLogoPath))
+            : null;
 
-        $footerLogoPath = $publicRoot . '/images/caloocannewlogo.png';
-        $footerLogoBase64 = file_exists($footerLogoPath) ? 'data:image/png;base64,' . base64_encode(file_get_contents($footerLogoPath)) : null;
+        $footerLogoPath   = $publicRoot . '/images/caloocannewlogo.png';
+        $footerLogoBase64 = file_exists($footerLogoPath)
+            ? 'data:image/png;base64,' . base64_encode(file_get_contents($footerLogoPath))
+            : null;
 
         $request = $consumableRequest;
 
         if ($blankReceipt) {
             $request = new class {
-                public $reference_no = '';
-                public $recipient_first_name = '';
-                public $recipient_last_name = '';
-                public $recipient_mi = '';
-                public $department = '';
-                public $approved_by = '';
-                public $supply_officer = '';
+                public $reference_no          = '';
+                public $recipient_first_name  = '';
+                public $recipient_last_name   = '';
+                public $recipient_mi          = '';
+                public $department            = '';
+                public $approved_by           = '';
+                public $supply_officer        = '';
                 public $request_date;
                 public $items;
                 public $campus;
@@ -319,11 +354,9 @@ class ConsumableRequestController extends Controller
                 public function __construct()
                 {
                     $this->request_date = now();
-                    $this->items = collect([]);
-                    $this->campus = null;
-                    $this->requester = new class {
-                        public $name = '';
-                    };
+                    $this->items        = collect([]);
+                    $this->campus       = null;
+                    $this->requester    = new class { public $name = ''; };
                 }
 
                 public function getRecipientNameAttribute(): string
@@ -337,11 +370,11 @@ class ConsumableRequestController extends Controller
 
         return [
             'consumableRequest' => $request,
-            'headerLogoBase64' => $headerLogoBase64,
-            'footerLogoBase64' => $footerLogoBase64,
-            'blankReceipt' => $blankReceipt,
-            'referenceNo' => $blankReceipt ? '' : ($request->reference_no ?? ''),
-            'recipientName' => $blankReceipt ? '' : ($request->recipient_name ?? ''),
+            'headerLogoBase64'  => $headerLogoBase64,
+            'footerLogoBase64'  => $footerLogoBase64,
+            'blankReceipt'      => $blankReceipt,
+            'referenceNo'       => $blankReceipt ? '' : ($request->reference_no ?? ''),
+            'recipientName'     => $blankReceipt ? '' : ($request->recipient_name ?? ''),
         ];
     }
 

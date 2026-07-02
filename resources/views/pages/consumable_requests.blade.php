@@ -16,30 +16,33 @@
 <div class="card" style="margin-bottom:1.25rem;">
     <div class="card-body" style="padding:1rem 1.25rem;">
         <div class="filter-pills">
-            <a href="{{ route('consumable-requests', ['status'=>'all']) }}" class="filter-pill {{ $status === 'all' ? 'active' : '' }}">All</a>
-            <a href="{{ route('consumable-requests', ['status'=>'pending']) }}" class="filter-pill {{ $status === 'pending' ? 'active' : '' }}">Pending</a>
+            <a href="{{ route('consumable-requests', ['status'=>'all']) }}"     class="filter-pill {{ $status === 'all'     ? 'active' : '' }}">All</a>
+            <a href="{{ route('consumable-requests', ['status'=>'pending']) }}"  class="filter-pill {{ $status === 'pending'  ? 'active' : '' }}">Pending</a>
             <a href="{{ route('consumable-requests', ['status'=>'approved']) }}" class="filter-pill {{ $status === 'approved' ? 'active' : '' }}">Approved</a>
             <a href="{{ route('consumable-requests', ['status'=>'rejected']) }}" class="filter-pill {{ $status === 'rejected' ? 'active' : '' }}">Rejected</a>
-            <a href="{{ route('consumable-requests', ['status'=>'partial']) }}" class="filter-pill {{ $status === 'partial' ? 'active' : '' }}">Partial</a>
+            <a href="{{ route('consumable-requests', ['status'=>'partial']) }}"  class="filter-pill {{ $status === 'partial'  ? 'active' : '' }}">Partial</a>
         </div>
     </div>
 </div>
 
 <div class="card">
-    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+    <div class="card-header">
         <div class="card-title"><i class="ti ti-clipboard-list"></i> Requests ({{ $requests->total() }})</div>
         @if(in_array(auth()->user()->role, ['admin','superadmin']))
-        <a href="{{ route('consumable-requests.blank-report') }}" target="_blank" class="modal-btn-primary" style="margin:0; padding:8px 12px; font-size:12px;">
-            <i class="ti ti-receipt"></i> Generate Blank Receipt Report
+        <a href="{{ route('consumable-requests.blank-report') }}" target="_blank"
+           class="modal-btn-primary" style="margin:0; padding:8px 12px; font-size:12px; width:auto;">
+            <i class="ti ti-receipt"></i> Generate Blank Receipt
         </a>
         @endif
     </div>
+
     <div class="data-table-wrap">
         <table class="data-table">
             <thead>
                 <tr>
                     <th>Reference</th>
                     <th>Recipient</th>
+                    <th>Source</th>
                     <th>Date</th>
                     <th>Items</th>
                     <th>Signatories</th>
@@ -50,14 +53,44 @@
             <tbody>
                 @forelse($requests as $req)
                 <tr id="req-row-{{ $req->id }}">
+
+                    {{-- Reference --}}
                     <td style="font-size:12px; font-weight:600;">{{ $req->reference_no }}</td>
+
+                    {{-- Recipient: full name + department --}}
                     <td>
                         <div class="cell-primary">{{ $req->recipient_name }}</div>
                         <div class="cell-secondary">{{ $req->department }}</div>
                     </td>
+
+                    {{-- Source: IMS or CS badge --}}
+                    <td>
+                        @if(($req->source ?? 'ims') === 'cs')
+                            <span class="chip-badge" style="background:#eff6ff; color:#1a56db; gap:4px;">
+                                <i class="ti ti-package" style="font-size:10px;"></i> CS
+                            </span>
+                        @else
+                            <span class="chip-badge" style="background:#f0faf4; color:#1a6b3a; gap:4px;">
+                                <i class="ti ti-device-desktop" style="font-size:10px;"></i> IMS
+                            </span>
+                        @endif
+                    </td>
+
+                    {{-- Date --}}
                     <td style="font-size:12px;">{{ $req->request_date->format('M d, Y') }}</td>
-                    <td><button class="chip-badge chip-type" style="cursor:pointer; border:none;" onclick="viewRequestDetails({{ $req->id }})">View ({{ $req->items->count() }})</button></td>
+
+                    {{-- Items count --}}
+                    <td>
+                        <button class="chip-badge chip-type" style="cursor:pointer; border:none;"
+                                onclick="viewRequestDetails({{ $req->id }})">
+                            View ({{ $req->items->count() }})
+                        </button>
+                    </td>
+
+                    {{-- Signatories --}}
                     <td style="font-size:11.5px;">{{ $req->approved_by ?? '—' }}</td>
+
+                    {{-- Status --}}
                     <td>
                         @if($req->status === 'pending')
                             <span class="chip-badge" style="background:#fff8f0; color:#ef9f27;">Pending</span>
@@ -69,37 +102,65 @@
                             <span class="chip-badge chip-status-inactive">Rejected</span>
                         @endif
                     </td>
+
+                    {{-- Actions --}}
                     <td>
                         <div class="table-actions">
-                            <button class="table-icon-btn view" title="View" onclick="viewRequestDetails({{ $req->id }})"><i class="ti ti-eye"></i></button>
+                            <button class="table-icon-btn view" title="View Details"
+                                    onclick="viewRequestDetails({{ $req->id }})">
+                                <i class="ti ti-eye"></i>
+                            </button>
+
                             @if($req->status === 'pending' && in_array(auth()->user()->role, ['admin','superadmin']))
-                            <button class="table-icon-btn" style="background:#fff8f0; color:#ef9f27;" title="Check/Review" onclick="openCheckModal({{ $req->id }})"><i class="ti ti-checkbox"></i></button>
+                            <button class="table-icon-btn" style="background:#fff8f0; color:#ef9f27;"
+                                    title="Check/Review"
+                                    onclick="openCheckModal({{ $req->id }})">
+                                <i class="ti ti-checkbox"></i>
+                            </button>
                             @endif
+
                             @if(in_array($req->status, ['approved', 'partial']))
-                            <a href="{{ route('consumable-requests.report', $req->id) }}" target="_blank" class="table-icon-btn" style="background:#f4f0ff; color:#7c3aed;" title="Generate Report">
+                            <a href="{{ route('consumable-requests.report', $req->id) }}" target="_blank"
+                               class="table-icon-btn" style="background:#f4f0ff; color:#7c3aed;"
+                               title="Generate Report">
                                 <i class="ti ti-file-text"></i>
                             </a>
                             @endif
+
                             @if(in_array(auth()->user()->role, ['admin','superadmin']))
-                            <a href="{{ route('consumable-requests.blank-report') }}" target="_blank" class="table-icon-btn" style="background:#ecfeff; color:#0f766e;" title="Generate Blank Receipt Report">
+                            <a href="{{ route('consumable-requests.blank-report') }}" target="_blank"
+                               class="table-icon-btn" style="background:#ecfeff; color:#0f766e;"
+                               title="Blank Receipt Report">
                                 <i class="ti ti-receipt"></i>
                             </a>
                             @endif
-                            <button class="table-icon-btn edit" title="Edit" onclick="openEditRequestModal({{ $req->id }})"><i class="ti ti-edit"></i></button>
+
+                            <button class="table-icon-btn edit" title="Edit"
+                                    onclick="openEditRequestModal({{ $req->id }})">
+                                <i class="ti ti-edit"></i>
+                            </button>
                         </div>
                     </td>
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7"><div class="empty-state"><i class="ti ti-clipboard-off"></i><p>No requests found.</p></div></td>
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <i class="ti ti-clipboard-off"></i>
+                            <p>No requests found.</p>
+                        </div>
+                    </td>
                 </tr>
                 @endforelse
             </tbody>
         </table>
     </div>
+
     @if($requests->hasPages())
     <div class="pagination-wrap">
-        <div class="pagination-info">Showing {{ $requests->firstItem() }} to {{ $requests->lastItem() }} of {{ $requests->total() }} results</div>
+        <div class="pagination-info">
+            Showing {{ $requests->firstItem() }} to {{ $requests->lastItem() }} of {{ $requests->total() }} results
+        </div>
         {{ $requests->onEachSide(1)->links() }}
     </div>
     @endif
@@ -129,7 +190,9 @@
             <div style="background:#fff8f0; border:1px solid #ef9f27; border-radius:8px; padding:10px 14px; margin:1rem 0; font-size:12px; color:#7a5500;">
                 <i class="ti ti-info-circle"></i> Approved items will be deducted from inventory. Rejected items require a reason.
             </div>
-            <button type="submit" class="modal-btn-primary" style="background:#ef9f27;"><i class="ti ti-device-floppy"></i> Submit Check</button>
+            <button type="submit" class="modal-btn-primary" style="background:#ef9f27;">
+                <i class="ti ti-device-floppy"></i> Submit Check
+            </button>
         </form>
     </div>
 </div>
@@ -138,31 +201,56 @@
 <div class="modal-overlay" id="edit-request-modal">
     <div class="modal-box-lg" style="max-width:700px;">
         <div class="modal-header-row" style="background:#3b82f6; margin:-1.5rem -1.5rem 1.25rem; padding:1.1rem 1.5rem; border-radius:14px 14px 0 0;">
-            <div class="modal-title-sm" style="color:#fff;"><i class="ti ti-edit"></i> Edit Request Group: <span id="er-ref-no"></span></div>
-            <button class="modal-close" onclick="document.getElementById('edit-request-modal').classList.remove('open');"><i class="ti ti-x"></i></button>
+            <div class="modal-title-sm" style="color:#fff;">
+                <i class="ti ti-edit"></i> Edit Request Group: <span id="er-ref-no"></span>
+            </div>
+            <button class="modal-close" onclick="document.getElementById('edit-request-modal').classList.remove('open');" style="background:rgba(255,255,255,0.15); color:#fff; border-color:transparent;"><i class="ti ti-x"></i></button>
         </div>
         <form method="POST" id="edit-request-form">
             @csrf @method('PUT')
 
             <div class="detail-section-title"><i class="ti ti-user"></i> Recipient Details</div>
             <div class="modal-grid" style="margin-bottom:1rem;">
-                <div class="modal-form-group" style="margin:0;"><div class="modal-label">Recipient Name *</div><input type="text" id="er-name-display" class="modal-input" disabled style="background:#fafafa;"></div>
-                <div class="modal-form-group" style="margin:0;"><div class="modal-label">Office/Department *</div><input type="text" name="department" id="er-dept" class="modal-input" required></div>
+                <div class="modal-form-group" style="margin:0;">
+                    <div class="modal-label">Recipient Name *</div>
+                    <input type="text" id="er-name-display" class="modal-input" disabled style="background:#fafafa;">
+                </div>
+                <div class="modal-form-group" style="margin:0;">
+                    <div class="modal-label">Office/Department *</div>
+                    <input type="text" name="department" id="er-dept" class="modal-input" required>
+                </div>
             </div>
             <input type="hidden" name="recipient_first_name" id="er-first">
-            <input type="hidden" name="recipient_last_name" id="er-last">
-            <input type="hidden" name="recipient_mi" id="er-mi">
+            <input type="hidden" name="recipient_last_name"  id="er-last">
+            <input type="hidden" name="recipient_mi"         id="er-mi">
 
-            <div class="detail-section-title" style="margin-top:1.25rem;"><i class="ti ti-list"></i> Requested Items</div>
-            <table class="data-table" style="margin-bottom:1rem;">
-                <thead><tr><th>Item</th><th style="width:90px;">Quantity</th><th>Purpose</th><th style="width:110px;">Status</th></tr></thead>
-                <tbody id="er-items-body"></tbody>
-            </table>
+            <div class="detail-section-title" style="margin-top:1.25rem;">
+                <i class="ti ti-list"></i> Requested Items
+            </div>
+            <div style="overflow-x:auto; margin-bottom:1rem;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th style="width:90px;">Quantity</th>
+                            <th>Purpose</th>
+                            <th style="width:110px;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="er-items-body"></tbody>
+                </table>
+            </div>
 
             <div class="detail-section-title"><i class="ti ti-signature"></i> Signatories</div>
-            <div class="modal-grid" style="grid-template-columns: 1fr 1fr 1fr; margin-top:0.5rem;">
-                <div class="modal-form-group" style="margin:0;"><div class="modal-label">Approved By</div><input type="text" name="approved_by" id="er-approved" class="modal-input"></div>
-                <div class="modal-form-group" style="margin:0;"><div class="modal-label">Supply Officer</div><input type="text" name="supply_officer" id="er-supply" class="modal-input"></div>
+            <div class="modal-grid" style="grid-template-columns:1fr 1fr 1fr; margin-top:0.5rem;">
+                <div class="modal-form-group" style="margin:0;">
+                    <div class="modal-label">Approved By</div>
+                    <input type="text" name="approved_by" id="er-approved" class="modal-input">
+                </div>
+                <div class="modal-form-group" style="margin:0;">
+                    <div class="modal-label">Supply Officer</div>
+                    <input type="text" name="supply_officer" id="er-supply" class="modal-input">
+                </div>
                 <div class="modal-form-group" style="margin:0;">
                     <div class="modal-label">Group Status</div>
                     <select name="status" id="er-status" class="modal-input">
@@ -175,8 +263,13 @@
             </div>
 
             <div style="display:flex; gap:10px; margin-top:1.5rem;">
-                <button type="button" class="btn-back-link" style="flex:1;" onclick="document.getElementById('edit-request-modal').classList.remove('open');">Cancel</button>
-                <button type="submit" class="modal-btn-primary" style="flex:1; margin:0; background:#3b82f6;"><i class="ti ti-device-floppy"></i> Update Request</button>
+                <button type="button" class="btn-back-link" style="flex:1;"
+                        onclick="document.getElementById('edit-request-modal').classList.remove('open');">
+                    Cancel
+                </button>
+                <button type="submit" class="modal-btn-primary" style="flex:1; margin:0; background:#3b82f6;">
+                    <i class="ti ti-device-floppy"></i> Update Request
+                </button>
             </div>
         </form>
     </div>
@@ -201,35 +294,56 @@ async function viewRequestDetails(id) {
     const res = await fetch(`/consumable-requests/${id}`);
     const req = await res.json();
 
+    // Build source badge
+    const sourceBadge = (req.source === 'cs')
+        ? '<span class="chip-badge" style="background:#eff6ff;color:#1a56db;"><i class="ti ti-package" style="font-size:10px;"></i> CS</span>'
+        : '<span class="chip-badge" style="background:#f0faf4;color:#1a6b3a;"><i class="ti ti-device-desktop" style="font-size:10px;"></i> IMS</span>';
+
+    // Build full recipient name including MI
+    const mi = req.recipient_mi ? req.recipient_mi.trim() : '';
+    const fullName = [req.recipient_first_name, mi, req.recipient_last_name]
+        .filter(Boolean).join(' ');
+
     document.getElementById('view-request-content').innerHTML = `
         <div class="detail-section">
             <div class="detail-section-title"><i class="ti ti-user"></i> Recipient Information</div>
-            <div class="detail-grid">
-                <div class="detail-row"><span>Employee Name: </span><strong>${req.recipient_first_name} ${req.recipient_mi||''} ${req.recipient_last_name}</strong></div>
+            <div class="detail-grid" style="margin-top:0.75rem;">
+                <div class="detail-row"><span>Employee Name: </span><strong>${fullName}</strong></div>
                 <div class="detail-row"><span>Office/Department: </span><strong>${req.department}</strong></div>
                 <div class="detail-row"><span>Campus: </span><strong>${req.campus?.name ?? '—'}</strong></div>
-                <div class="detail-row"><span>Request Date: </span><strong>${new Date(req.request_date).toLocaleDateString()}</strong></div>
+                <div class="detail-row"><span>Request Date: </span><strong>${new Date(req.request_date).toLocaleDateString('en-PH',{year:'numeric',month:'long',day:'numeric'})}</strong></div>
+                <div class="detail-row"><span>Request Source: </span><strong>${sourceBadge}</strong></div>
+                <div class="detail-row"><span>Requested By: </span><strong>${req.requester?.name ?? '—'}</strong></div>
             </div>
         </div>
         <br>
         <div class="detail-section">
             <div class="detail-section-title"><i class="ti ti-list"></i> Requested Items</div>
-            <table class="data-table"><thead><tr><th>Item</th><th>Qty</th><th>Purpose</th><th>Status</th></tr></thead><tbody>
-            ${req.items.map(i => `
-                <tr>
-                    <td>${i.consumable?.item_name ?? '—'}</td>
-                    <td>${i.quantity} ${i.consumable?.unit ?? ''}</td>
-                    <td>${i.purpose ?? '—'}</td>
-                    <td><span class="chip-badge ${i.status==='approved'?'chip-status-active':(i.status==='rejected'?'chip-status-inactive':'')}" style="${i.status==='pending'?'background:#fff8f0;color:#ef9f27;':''}">${i.status}</span></td>
-                </tr>
-            `).join('')}
-            </tbody></table>
+            <div style="overflow-x:auto; margin-top:0.75rem;">
+                <table class="data-table">
+                    <thead><tr><th>Item</th><th>Qty</th><th>Purpose</th><th>Status</th></tr></thead>
+                    <tbody>
+                    ${req.items.map(i => `
+                        <tr>
+                            <td>${i.consumable?.item_name ?? '—'}</td>
+                            <td>${i.quantity} ${i.consumable?.unit ?? ''}</td>
+                            <td style="font-size:12px;">${i.purpose ?? '—'}</td>
+                            <td>
+                                <span class="chip-badge ${i.status==='approved'?'chip-status-active':(i.status==='rejected'?'chip-status-inactive':'')}"
+                                      style="${i.status==='pending'?'background:#fff8f0;color:#ef9f27;':''}">
+                                    ${i.status}
+                                </span>
+                            </td>
+                        </tr>
+                    `).join('')}
+                    </tbody>
+                </table>
+            </div>
         </div>
         <br>
         <div class="detail-section">
             <div class="detail-section-title"><i class="ti ti-signature"></i> Signatories</div>
-            <div class="detail-grid">
-                <div class="detail-row"><span>Requested By: </span><strong>${req.requester?.name ?? '—'}</strong></div>
+            <div class="detail-grid" style="margin-top:0.75rem;">
                 <div class="detail-row"><span>Approved By: </span><strong>${req.approved_by ?? '—'}</strong></div>
                 <div class="detail-row"><span>Supply Officer: </span><strong>${req.supply_officer ?? '—'}</strong></div>
             </div>
@@ -242,25 +356,44 @@ async function openCheckModal(id) {
     const res = await fetch(`/consumable-requests/${id}`);
     const req = await res.json();
 
+    const mi = req.recipient_mi ? req.recipient_mi.trim() : '';
+    const fullName = [req.recipient_first_name, mi, req.recipient_last_name].filter(Boolean).join(' ');
+
     document.getElementById('check-form').action = `/consumable-requests/${id}/review`;
     document.getElementById('check-form-content').innerHTML = `
-        <div class="detail-row" style="margin-bottom:1rem;"><span>Recipient</span><strong>${req.recipient_first_name} ${req.recipient_last_name} — ${req.department}</strong></div>
-        <table class="data-table"><thead><tr><th>Item</th><th>Qty</th><th>Decision</th><th>Rejection Reason</th></tr></thead><tbody>
-        ${req.items.map((i, idx) => `
-            <tr>
-                <td>${i.consumable?.item_name ?? '—'}<div class="cell-secondary">Available: ${i.consumable?.current_stock ?? 0} ${i.consumable?.unit ?? ''}</div></td>
-                <td>${i.quantity}</td>
-                <td>
-                    <input type="hidden" name="items[${idx}][id]" value="${i.id}">
-                    <select name="items[${idx}][decision]" class="modal-input" style="padding:6px 10px; font-size:12px;">
-                        <option value="approved">Approve</option>
-                        <option value="rejected">Reject</option>
-                    </select>
-                </td>
-                <td><input type="text" name="items[${idx}][rejection_reason]" class="modal-input" style="padding:6px 10px; font-size:12px;" placeholder="If rejected..."></td>
-            </tr>
-        `).join('')}
-        </tbody></table>
+        <div style="margin-bottom:1rem; padding:10px 14px; background:#fafafa; border-radius:8px;">
+            <div style="font-size:12px; color:var(--text-muted); margin-bottom:3px;">Recipient</div>
+            <div style="font-size:13px; font-weight:600;">${fullName}</div>
+            <div style="font-size:12px; color:var(--text-muted);">${req.department}</div>
+        </div>
+        <div style="overflow-x:auto;">
+            <table class="data-table">
+                <thead><tr><th>Item</th><th>Qty</th><th>Decision</th><th>Rejection Reason</th></tr></thead>
+                <tbody>
+                ${req.items.map((i, idx) => `
+                    <tr>
+                        <td>
+                            ${i.consumable?.item_name ?? '—'}
+                            <div class="cell-secondary">Available: ${i.consumable?.current_stock ?? 0} ${i.consumable?.unit ?? ''}</div>
+                        </td>
+                        <td>${i.quantity}</td>
+                        <td>
+                            <input type="hidden" name="items[${idx}][id]" value="${i.id}">
+                            <select name="items[${idx}][decision]" class="modal-input" style="padding:6px 10px; font-size:12px;">
+                                <option value="approved">Approve</option>
+                                <option value="rejected">Reject</option>
+                            </select>
+                        </td>
+                        <td>
+                            <input type="text" name="items[${idx}][rejection_reason]"
+                                   class="modal-input" style="padding:6px 10px; font-size:12px;"
+                                   placeholder="If rejected...">
+                        </td>
+                    </tr>
+                `).join('')}
+                </tbody>
+            </table>
+        </div>
     `;
     document.getElementById('check-modal').classList.add('open');
 }
@@ -275,25 +408,29 @@ async function getAvailableConsumables() {
 }
 
 async function openEditRequestModal(id) {
-    const [reqRes, items] = await Promise.all([
+    const [req, items] = await Promise.all([
         fetch(`/consumable-requests/${id}`).then(r => r.json()),
         getAvailableConsumables()
     ]);
-    const req = reqRes;
 
-    document.getElementById('er-ref-no').textContent = req.reference_no;
-    document.getElementById('er-name-display').value = `${req.recipient_first_name} ${req.recipient_mi || ''} ${req.recipient_last_name}`.replace(/\s+/g, ' ').trim();
-    document.getElementById('er-first').value = req.recipient_first_name;
-    document.getElementById('er-last').value = req.recipient_last_name;
-    document.getElementById('er-mi').value = req.recipient_mi ?? '';
-    document.getElementById('er-dept').value = req.department;
-    document.getElementById('er-approved').value = req.approved_by ?? '';
-    document.getElementById('er-supply').value = req.supply_officer ?? '';
-    document.getElementById('er-status').value = req.status;
-    document.getElementById('edit-request-form').action = `/consumable-requests/${id}`;
+    const mi = req.recipient_mi ? req.recipient_mi.trim() : '';
+    const fullName = [req.recipient_first_name, mi, req.recipient_last_name].filter(Boolean).join(' ');
+
+    document.getElementById('er-ref-no').textContent      = req.reference_no;
+    document.getElementById('er-name-display').value       = fullName;
+    document.getElementById('er-first').value              = req.recipient_first_name;
+    document.getElementById('er-last').value               = req.recipient_last_name;
+    document.getElementById('er-mi').value                 = req.recipient_mi ?? '';
+    document.getElementById('er-dept').value               = req.department;
+    document.getElementById('er-approved').value           = req.approved_by ?? '';
+    document.getElementById('er-supply').value             = req.supply_officer ?? '';
+    document.getElementById('er-status').value             = req.status;
+    document.getElementById('edit-request-form').action    = `/consumable-requests/${id}`;
 
     const itemOptions = (selectedId) => items.map(it =>
-        `<option value="${it.id}" ${it.id === selectedId ? 'selected' : ''}>${it.item_name} (Available: ${it.current_stock} ${it.unit})</option>`
+        `<option value="${it.id}" ${it.id === selectedId ? 'selected' : ''}>
+            ${it.item_name} (Available: ${it.current_stock} ${it.unit})
+         </option>`
     ).join('');
 
     document.getElementById('er-items-body').innerHTML = req.items.map((i, idx) => `
@@ -304,11 +441,18 @@ async function openEditRequestModal(id) {
                     ${itemOptions(i.consumable_id)}
                 </select>
             </td>
-            <td><input type="number" min="1" name="items[${idx}][quantity]" value="${i.quantity}" class="modal-input" style="padding:6px 8px; font-size:12px;"></td>
-            <td><input type="text" name="items[${idx}][purpose]" value="${i.purpose ?? ''}" class="modal-input" style="padding:6px 8px; font-size:12px;" placeholder="Office use"></td>
+            <td>
+                <input type="number" min="1" name="items[${idx}][quantity]"
+                       value="${i.quantity}" class="modal-input" style="padding:6px 8px; font-size:12px;">
+            </td>
+            <td>
+                <input type="text" name="items[${idx}][purpose]"
+                       value="${i.purpose ?? ''}" class="modal-input"
+                       style="padding:6px 8px; font-size:12px;" placeholder="Office use">
+            </td>
             <td>
                 <select name="items[${idx}][status]" class="modal-input" style="padding:6px 8px; font-size:12px;">
-                    <option value="pending" ${i.status === 'pending' ? 'selected' : ''}>Pending</option>
+                    <option value="pending"  ${i.status === 'pending'  ? 'selected' : ''}>Pending</option>
                     <option value="approved" ${i.status === 'approved' ? 'selected' : ''}>Approved</option>
                     <option value="rejected" ${i.status === 'rejected' ? 'selected' : ''}>Rejected</option>
                 </select>
@@ -325,7 +469,7 @@ document.querySelectorAll('.modal-overlay').forEach(o => {
 
 // ── HIGHLIGHT ROW FROM NOTIFICATION CLICK ──
 document.addEventListener('DOMContentLoaded', function() {
-    const params = new URLSearchParams(window.location.search);
+    const params      = new URLSearchParams(window.location.search);
     const highlightId = params.get('highlight');
     if (highlightId) {
         const row = document.getElementById('req-row-' + highlightId);
