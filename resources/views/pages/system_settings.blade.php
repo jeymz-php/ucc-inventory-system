@@ -7,7 +7,7 @@
 <div class="hero-banner">
     <div class="hero-left">
         <div class="hero-greeting"><i class="ti ti-settings"></i> System Settings</div>
-        <p class="hero-sub">Manage your account security, monitor system health, and handle data backup &amp; restoration.</p>
+        <p class="hero-sub">Manage your account security, monitor system health, publish version updates, and handle system configuration.</p>
     </div>
 </div>
 
@@ -23,9 +23,15 @@
     <a href="{{ route('system.status') }}" class="settings-tile">
         <div class="settings-tile-icon" style="background:#f0faf4; color:#1a6b3a;"><i class="ti ti-activity"></i></div>
         <div class="settings-tile-title">System Status</div>
-        <div class="settings-tile-desc">Monitor uptime, toggle maintenance mode, and review system logs.</div>
+        <div class="settings-tile-desc">Monitor uptime, toggle maintenance mode for IMS & CS, and review system logs.</div>
     </a>
     @endif
+
+    <a href="{{ route('system.updates') }}" class="settings-tile">
+        <div class="settings-tile-icon" style="background:#faf0ff; color:#7c3aed;"><i class="ti ti-git-branch"></i></div>
+        <div class="settings-tile-title">Version History & Updates</div>
+        <div class="settings-tile-desc">Publish system update notes for IMS and CS. Toggle the login modal to notify users of new features.</div>
+    </a>
 
 </div>
 
@@ -55,7 +61,7 @@
     font-size: 22px; margin-bottom: 1rem;
 }
 .settings-tile-title { font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 0.4rem; }
-.settings-tile-desc { font-size: 12.5px; color: var(--text-muted); line-height: 1.5; }
+.settings-tile-desc  { font-size: 12.5px; color: var(--text-muted); line-height: 1.5; }
 </style>
 
 @endsection

@@ -894,9 +894,15 @@ async function pollNotifications() {
         const res  = await fetch('{{ route("notifications.poll") }}');
         const data = await res.json();
         const readIds = getReadNotifIds();
+        const msgRes  = await fetch('{{ route("messages.poll-all") }}');
+        const msgData = await msgRes.json();
 
         // Only count unread toward the badge
         const unreadCount = data.requests.filter(r => !readIds.includes(`${r.type}-${r.id}`)).length;
+
+        if (msgData.unread_conversations > 0) {
+            parts.push(`${msgData.unread_conversations} unread message(s)`);
+        }
 
         if (unreadCount > 0) {
             badge.style.display = 'flex';

@@ -405,4 +405,58 @@ class EquipmentActionController extends Controller
 
         return $pdf->stream('Inventory-Report-' . now()->format('Y-m-d') . '.pdf');
     }
+
+    public function parReport(Request $request)
+    {
+        $accountablePerson = $request->get('accountable_person');
+    
+        if (!$accountablePerson) {
+            return back()->with('error', 'Please select an accountable person.');
+        }
+    
+        $models = [
+            \App\Models\ComputerInventory::class,
+            \App\Models\KitchenEquipment::class,
+            \App\Models\OfficeEquipment::class,
+            \App\Models\LabEquipment::class,
+            \App\Models\GeneralEquipment::class,
+        ];
+    
+        $items = collect();
+    
+        foreach ($models as $modelClass) {
+            $results = $modelClass::with(['campus', 'location'])
+                ->where('remarks', $accountablePerson)
+                ->where(function ($q) {
+                    $q->where('is_condemned', false)
+                    ->orWhereNull('is_condemned');
+                })
+                ->get();
+    
+            $items = $items->merge($results);
+        }
+    
+        $items = $items->sortBy('display_name')->values();
+    
+        // Generate PAR number: PAR-YYYYMMDD-XXXX
+        $parNo = 'PAR-' . now()->format('Ymd') . '-' . str_pad(rand(0, 9999), 4, '0', STR_PAD_LEFT);
+    
+        // Logos
+        $headerLogoPath   = public_path('images/ucc.png');
+        $headerLogoBase64 = file_exists($headerLogoPath)
+            ? 'data:image/png;base64,' . base64_encode(file_get_contents($headerLogoPath))
+            : null;
+    
+        $footerLogoPath   = public_path('images/caloocannewlogo.png');
+        $footerLogoBase64 = file_exists($footerLogoPath)
+            ? 'data:image/png;base64,' . base64_encode(file_get_contents($footerLogoPath))
+            : null;
+    
+        $pdf = \PDF::loadView('pdf.par_report', compact(
+            'items', 'accountablePerson', 'parNo',
+            'headerLogoBase64', 'footerLogoBase64'
+        ))->setPaper('a4', 'portrait');
+    
+        return $pdf->stream('PAR-' . str_replace([' ', ','], ['-', ''], $accountablePerson) . '-' . now()->format('Ymd') . '.pdf');
+    }
 }

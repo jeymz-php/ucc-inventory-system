@@ -119,3 +119,9 @@ July 2, 2026 - Part II
 
 - System Status of Both Systems are upgraded, updated UI and including the system of CS can now set to SYSTEM DOWN anytime
 - IMS users will see the account pending after logging the new registered IMS user account, for security purposes
+
+July 6, 2026
+
+- Version Updates implemented, including Consumable System, users can see the latest update of UCC - IMS and UCC - CS
+- Messages implemented, can talk with the CS users (as long as CS users create a ticket to talk with the admin)
+- PAR Report implemented

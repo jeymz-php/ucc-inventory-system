@@ -16,6 +16,7 @@
         </div>
     </div>
     <div class="hero-right" style="display:flex; gap:8px;">
+        <a href="#" class="btn-add" onclick="event.preventDefault(); openParModal();"><i class="ti ti-file-certificate"></i> PAR</a>
         <a href="#" class="btn-add" onclick="event.preventDefault(); openReportModal();"><i class="ti ti-file-text"></i> Report</a>
         <a href="#" class="btn-add" id="transfer-btn" onclick="event.preventDefault(); openTransferModal();" style="opacity:0.5; pointer-events:none;"><i class="ti ti-arrows-exchange"></i> Transfer</a>
         <a href="#" class="btn-add" onclick="event.preventDefault(); openCategoryModal();"><i class="ti ti-plus"></i> Add Equipment</a>
@@ -683,6 +684,116 @@
     </div>
 </div>
 
+{{-- PAR REPORT MODAL --}}
+<div class="modal-overlay" id="par-modal">
+    <div class="modal-box-lg" style="max-width:520px;">
+        <div class="modal-header-row">
+            <div class="modal-title-sm">
+                <i class="ti ti-file-certificate" style="color:var(--green-dark);"></i>
+                Generate PAR Report
+            </div>
+            <button class="modal-close" onclick="closeParModal()"><i class="ti ti-x"></i></button>
+        </div>
+
+        {{-- Icon + title --}}
+        <div style="text-align:center; padding:1rem 0 0.5rem;">
+            <div style="width:56px; height:56px; border-radius:50%; background:var(--green-light);
+                        display:flex; align-items:center; justify-content:center;
+                        margin:0 auto 0.75rem; font-size:26px; color:var(--green-dark);">
+                <i class="ti ti-file-certificate"></i>
+            </div>
+            <div style="font-size:15px; font-weight:700; color:var(--text-primary);">Property Acknowledgement Receipt</div>
+            <div style="font-size:12.5px; color:var(--text-muted); margin-top:4px;">Select an accountable person to generate PAR</div>
+        </div>
+
+        <form method="GET" action="{{ route('equipment.par-report') }}" target="_blank" id="par-form">
+
+            <div class="modal-form-group" style="margin-top:1rem;">
+                <div class="modal-label">
+                    <i class="ti ti-user" style="font-size:12px; color:var(--green-dark);"></i>
+                    Select Accountable Person *
+                </div>
+                <div style="position:relative;">
+                    <i class="ti ti-user" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#aaa; font-size:15px; pointer-events:none;"></i>
+                    <select name="accountable_person" id="par-person-select" class="modal-input"
+                            style="padding-left:36px;" required onchange="updateParPreview(this.value)">
+                        <option value="">-- Select Accountable Person --</option>
+                        {{-- Existing IMS Users --}}
+                        <optgroup label="── IMS Users ──">
+                            @foreach($imsUsers as $user)
+                            <option value="{{ $user->remarks_format ?? $user->name }}">
+                                {{ $user->name }}
+                            </option>
+                            @endforeach
+                        </optgroup>
+                        {{-- Non-IMS persons from remarks column --}}
+                        @if($accountablePersons->count())
+                        <optgroup label="── Other Accountable Persons ──">
+                            @foreach($accountablePersons as $person)
+                            <option value="{{ $person }}">{{ $person }}</option>
+                            @endforeach
+                        </optgroup>
+                        @endif
+                    </select>
+                </div>
+                <div class="modal-hint" style="color:#888;">PAR will include all non-condemned items assigned to this person.</div>
+            </div>
+
+            {{-- Signatory Preview --}}
+            <div id="par-preview" style="display:none; margin:1rem 0; background:var(--green-light);
+                                          border:1px solid #c6e9d3; border-radius:10px; padding:1rem;">
+                <div style="font-size:11px; font-weight:700; text-transform:uppercase;
+                            letter-spacing:1px; color:var(--green-dark); margin-bottom:0.75rem;
+                            display:flex; align-items:center; gap:6px;">
+                    <i class="ti ti-signature"></i> Signatory Preview
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+                    <div>
+                        <div style="font-size:10px; color:#888; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px;">Received From:</div>
+                        <div style="font-size:12px; font-weight:700; color:var(--text-primary);">REYNALDO H. CARANDANG JR.</div>
+                        <div style="font-size:11px; color:#666;">AVP for Administration</div>
+                    </div>
+                    <div>
+                        <div style="font-size:10px; color:#888; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px;">Received By:</div>
+                        <div style="font-size:12px; font-weight:700; color:var(--green-dark);" id="par-preview-name">—</div>
+                        <div style="font-size:11px; color:#666;">Accountable Person</div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- PAR Summary --}}
+            <div id="par-summary" style="display:none; margin-bottom:1rem; background:#fafafa;
+                                          border:1px solid var(--border); border-radius:10px; padding:1rem;">
+                <div style="font-size:11px; font-weight:700; text-transform:uppercase;
+                            letter-spacing:1px; color:var(--text-muted); margin-bottom:0.75rem;
+                            display:flex; align-items:center; gap:6px;">
+                    <i class="ti ti-info-circle" style="color:var(--green-dark);"></i> PAR Summary
+                </div>
+                <div style="font-size:12.5px; color:var(--text-secondary); display:flex; flex-direction:column; gap:6px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <i class="ti ti-circle-check" style="color:var(--green-dark); font-size:14px;"></i>
+                        PAR will include all non-condemned equipment assigned to
+                        <strong id="par-summary-name" style="color:var(--green-dark);"></strong>.
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <i class="ti ti-file-text" style="color:var(--green-dark); font-size:14px;"></i>
+                        Report will open in a new tab.
+                    </div>
+                </div>
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:1rem;">
+                <button type="button" class="btn-back-link" style="flex:1;" onclick="closeParModal()">
+                    <i class="ti ti-x"></i> Cancel
+                </button>
+                <button type="submit" class="modal-btn-primary" style="flex:1.5; margin:0;">
+                    <i class="ti ti-file-certificate"></i> Generate PAR
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <style>
 .report-type-btn {
     flex: 1; padding: 10px; border-radius: 8px;
@@ -803,6 +914,33 @@
 @endsection
 
 @push('scripts')
+<script>
+// ── PAR MODAL ──
+function openParModal() {
+    document.getElementById('par-modal').classList.add('open');
+}
+function closeParModal() {
+    document.getElementById('par-modal').classList.remove('open');
+}
+
+function updateParPreview(value) {
+    const preview     = document.getElementById('par-preview');
+    const summary     = document.getElementById('par-summary');
+    const previewName = document.getElementById('par-preview-name');
+    const summaryName = document.getElementById('par-summary-name');
+
+    if (value) {
+        const displayName = value.toUpperCase();
+        previewName.textContent = displayName;
+        summaryName.textContent = displayName;
+        preview.style.display = 'block';
+        summary.style.display = 'block';
+    } else {
+        preview.style.display = 'none';
+        summary.style.display = 'none';
+    }
+}
+</script>
 <script>
 // ── ACCOUNTABLE PERSON TYPE TOGGLE ENGINE ──
 function toggleAccountableType(radioElement) {

@@ -27,6 +27,8 @@ use App\Http\Controllers\ConsumableRequestController;
 use App\Http\Controllers\BackupRestoreController;
 use App\Http\Controllers\ConsumableReportController;
 use App\Http\Controllers\MyEquipmentController;
+use App\Http\Controllers\SystemUpdateController;
+use App\Http\Controllers\ConversationController;
 
 // ──────────────────────────────────────────────
 // Landing page
@@ -153,12 +155,22 @@ Route::middleware(['auth', 'role:admin,superadmin'])->group(function () {
     Route::post('/equipment/{type}/{id}/restore',                     [EquipmentActionController::class, 'restore'])->name('equipment.restore');
     Route::post('/equipment/{type}/{id}/waste',                       [EquipmentActionController::class, 'transferToWaste'])->name('equipment.waste');
     Route::post('/equipment/{type}/{id}/undo-delete', [EquipmentActionController::class, 'undoDelete'])->name('equipment.undo-delete');
+    Route::get('/equipment/par-report', [EquipmentActionController::class, 'parReport'])->name('equipment.par-report');
 
     // Equipment articles
     Route::get('/equipment-articles',                                 [EquipmentArticleController::class, 'index'])->name('equipment.articles.index');
     Route::post('/equipment-articles',                                [EquipmentArticleController::class, 'store'])->name('equipment.articles.store');
     Route::put('/equipment-articles/{article}',                       [EquipmentArticleController::class, 'update'])->name('equipment.articles.update');
     Route::delete('/equipment-articles/{article}',                    [EquipmentArticleController::class, 'destroy'])->name('equipment.articles.destroy');
+
+    // ── Messages (CS User Tickets) ──
+    Route::get('/messages',                        [ConversationController::class, 'index'])->name('messages.index');
+    Route::get('/messages/poll-all',               [ConversationController::class, 'pollAll'])->name('messages.poll-all');
+    Route::get('/messages/{conversation}',         [ConversationController::class, 'show'])->name('messages.show');
+    Route::post('/messages/{conversation}/reply',  [ConversationController::class, 'reply'])->name('messages.reply');
+    Route::patch('/messages/{conversation}/close', [ConversationController::class, 'close'])->name('messages.close');
+    Route::patch('/messages/{conversation}/reopen',[ConversationController::class, 'reopen'])->name('messages.reopen');
+    Route::get('/messages/{conversation}/poll',    [ConversationController::class, 'poll'])->name('messages.poll');
 
     // Other pages
     Route::get('/categories',  fn() => view('pages.categories'))->name('categories');
@@ -191,6 +203,14 @@ Route::middleware(['auth', 'role:admin,superadmin'])->group(function () {
 
     // System settings
     Route::get('/settings', [SystemSettingsController::class, 'index'])->name('system.settings');
+
+    // System Updates (Version History)
+    Route::get('/settings/updates',                        [SystemUpdateController::class, 'index'])->name('system.updates');
+    Route::post('/settings/updates',                       [SystemUpdateController::class, 'store'])->name('system.updates.store');
+    Route::put('/settings/updates/{systemUpdate}',         [SystemUpdateController::class, 'update'])->name('system.updates.update');
+    Route::delete('/settings/updates/{systemUpdate}',      [SystemUpdateController::class, 'destroy'])->name('system.updates.destroy');
+    Route::patch('/settings/updates/{systemUpdate}/toggle',[SystemUpdateController::class, 'toggleModal'])->name('system.updates.toggle');
+    Route::post('/settings/updates/dismiss',               [SystemUpdateController::class, 'dismissModal'])->name('system.updates.dismiss');
 
 });
 

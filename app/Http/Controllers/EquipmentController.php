@@ -9,7 +9,7 @@ use App\Models\KitchenEquipment;
 use App\Models\LabEquipment;
 use App\Models\Location;
 use App\Models\OfficeEquipment;
-use App\Models\User; // Imported for fetching registered UCC-IMS accounts
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
@@ -62,10 +62,8 @@ class EquipmentController extends Controller
             $allItems = $allItems->merge($query->get());
         }
 
-        // Sort merged collection by latest updated
         $allItems = $allItems->sortByDesc('updated_at')->values();
 
-        // Manual pagination since we merged multiple Eloquent collections
         $perPage     = 50;
         $currentPage = $request->get('page', 1);
         $paged       = $allItems->slice(($currentPage - 1) * $perPage, $perPage)->values();
@@ -75,7 +73,6 @@ class EquipmentController extends Controller
             ['path' => $request->url(), 'query' => $request->query()]
         );
 
-        // Stats
         $stats = [
             'total'       => 0,
             'assigned'    => 0,
@@ -108,9 +105,39 @@ class EquipmentController extends Controller
         }
         $accountablePersons = $accountablePersons->unique()->filter()->sort()->values();
 
-        // Fetch users using the correct 'name' column from your SQL schema
+        // Fetch IMS users and attach a pre-computed remarks_format (Lastname, Firstname)
+        // so the PAR modal dropdown can use it directly without Blade-side computation
         $imsUsers = User::orderBy('name')
-            ->get(['id', 'name']);
+            ->where('source', 'ims')
+            ->get(['id', 'name'])
+            ->map(function ($user) {
+                $fullName = trim($user->name);
+
+                // Handle special accounts
+                if (in_array($fullName, ['System Administrator', 'Administrator'])) {
+                    $user->remarks_format = $fullName;
+                    return $user;
+                }
+
+                $nameParts = explode(' ', $fullName);
+
+                if (count($nameParts) > 1) {
+                    $lastName  = array_pop($nameParts);
+                    $firstName = implode(' ', $nameParts);
+                    $user->remarks_format = $lastName . ', ' . $firstName;
+                } else {
+                    $user->remarks_format = $fullName;
+                }
+
+                return $user;
+            });
+
+        // Remove IMS users whose remarks_format already appears in $accountablePersons
+        // to avoid duplicates in the PAR dropdown
+        $imsUserRemarks = $imsUsers->pluck('remarks_format')->toArray();
+        $accountablePersons = $accountablePersons->filter(function ($person) use ($imsUserRemarks) {
+            return !in_array($person, $imsUserRemarks);
+        })->values();
 
         return view('pages.equipment', compact(
             'paginator', 'stats', 'campuses', 'locations',
@@ -147,8 +174,8 @@ class EquipmentController extends Controller
             'cost'                     => $request->input('cost') ?? 0.00,
             'status'                   => $request->input('location_id') ? 'assigned' : 'available',
             'condition_status'         => $request->input('condition_status'),
-            'remarks'                  => $accountable['remarks'],     // Saves plaintext "Lastname, Firstname" to database
-            'assigned_to'              => $accountable['assigned_to'], // Saves Foreign Key User ID mapping
+            'remarks'                  => $accountable['remarks'],
+            'assigned_to'              => $accountable['assigned_to'],
         ]);
 
         return redirect()->route('equipment')->with('success', 'Computer equipment added successfully.');
@@ -264,41 +291,40 @@ class EquipmentController extends Controller
             'purchase_date'     => $request->input('purchase_date'),
             'status'            => $request->input('location_id') ? 'assigned' : 'available',
             'condition_status'  => $request->input('condition_status'),
-            'remarks'           => $accountable['remarks'],     // Correctly updates plaintext column
-            'assigned_to'       => $accountable['assigned_to'], // Correctly updates schema foreign key column
+            'remarks'           => $accountable['remarks'],
+            'assigned_to'       => $accountable['assigned_to'],
         ]);
 
         return redirect()->route('equipment')->with('success', 'General equipment added successfully.');
     }
 
     /**
-     * Helper to determine, format, and split accountable user strings 
+     * Helper to determine, format, and split accountable user strings
      * while mapping them directly to database schema columns.
      */
     private function resolveAccountablePerson(Request $request, string $equipmentType): array
     {
-        $typeKey = 'accountable_type_' . $equipmentType;
+        $typeKey         = 'accountable_type_' . $equipmentType;
         $accountableType = $request->input($typeKey, 'existing');
 
-        $remarks = null;
+        $remarks    = null;
         $assignedTo = null;
 
         if ($accountableType === 'existing' && $request->filled('user_id')) {
             $assignedTo = $request->input('user_id');
-            $user = User::find($assignedTo);
-            
+            $user       = User::find($assignedTo);
+
             if ($user && !empty($user->name)) {
                 $fullName = trim($user->name);
 
-                // Check for system accounts or names that shouldn't be split by last name
-                if ($fullName === 'System Administrator' || $fullName === 'Administrator') {
+                if (in_array($fullName, ['System Administrator', 'Administrator'])) {
                     $remarks = $fullName;
                 } else {
                     $nameParts = explode(' ', $fullName);
                     if (count($nameParts) > 1) {
-                        $lastName = array_pop($nameParts); // Pops 'Gregorio'
-                        $firstName = implode(' ', $nameParts); // Implodes 'James Ryan'
-                        $remarks = $lastName . ', ' . $firstName; // Saves as 'Gregorio, James Ryan'
+                        $lastName  = array_pop($nameParts);
+                        $firstName = implode(' ', $nameParts);
+                        $remarks   = $lastName . ', ' . $firstName;
                     } else {
                         $remarks = $fullName;
                     }
@@ -316,8 +342,8 @@ class EquipmentController extends Controller
         }
 
         return [
-            'remarks'     => $remarks,     // To fill column `remarks`
-            'assigned_to' => $assignedTo,  // To fill column `assigned_to`
+            'remarks'     => $remarks,
+            'assigned_to' => $assignedTo,
         ];
     }
 }
