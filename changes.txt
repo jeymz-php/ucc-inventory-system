@@ -133,3 +133,10 @@ July 7, 2026
 - Consumable page updated, added deduction of stock
 - Consumable Request page updated, can now edit the selected requested consumable, with adding another item, can edit the quantity item, remove the consumable item
 - Fix minor bugs and UI issues
+
+July 8, 2026 - Part I
+
+- Managing System under System Settings implemented
+- Managing Departments and Campus under the Managing System implemented, can manage the departments and campuses
+- IMS User page can now set the user source IMS or CS, including of adding/editing the user account
+- Users from originated UCC - IMS migrated to Improvised UCC - IMS (Local first) to test if the CS users can log in to the Improvised UCC - CS

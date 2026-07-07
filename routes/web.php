@@ -29,6 +29,8 @@ use App\Http\Controllers\ConsumableReportController;
 use App\Http\Controllers\MyEquipmentController;
 use App\Http\Controllers\SystemUpdateController;
 use App\Http\Controllers\ConversationController;
+use App\Http\Controllers\DepartmentController;
+use App\Http\Controllers\CampusController;
 
 // ──────────────────────────────────────────────
 // Landing page
@@ -213,6 +215,21 @@ Route::middleware(['auth', 'role:admin,superadmin'])->group(function () {
     Route::delete('/settings/updates/{systemUpdate}',      [SystemUpdateController::class, 'destroy'])->name('system.updates.destroy');
     Route::patch('/settings/updates/{systemUpdate}/toggle',[SystemUpdateController::class, 'toggleModal'])->name('system.updates.toggle');
     Route::post('/settings/updates/dismiss',               [SystemUpdateController::class, 'dismissModal'])->name('system.updates.dismiss');
+
+    // ── Managing System ──
+    Route::get('/manage',                                   function () { return view('pages.manage.index'); })->name('manage.index');
+    Route::get('/manage/departments',                       [DepartmentController::class, 'index'])->name('manage.departments');
+    Route::post('/manage/departments',                      [DepartmentController::class, 'store'])->name('manage.departments.store');
+    Route::put('/manage/departments/{department}',          [DepartmentController::class, 'update'])->name('manage.departments.update');
+    Route::patch('/manage/departments/{department}/toggle', [DepartmentController::class, 'toggleActive'])->name('manage.departments.toggle');
+    Route::delete('/manage/departments/{department}',       [DepartmentController::class, 'destroy'])->name('manage.departments.destroy');
+
+    // ── Campuses ──
+    Route::get('/manage/campuses',                       [CampusController::class, 'index'])->name('manage.campuses');
+    Route::post('/manage/campuses',                      [CampusController::class, 'store'])->name('manage.campuses.store');
+    Route::put('/manage/campuses/{campus}',              [CampusController::class, 'update'])->name('manage.campuses.update');
+    Route::patch('/manage/campuses/{campus}/toggle',     [CampusController::class, 'toggleActive'])->name('manage.campuses.toggle');
+    Route::delete('/manage/campuses/{campus}',           [CampusController::class, 'destroy'])->name('manage.campuses.destroy');
 
 });
 

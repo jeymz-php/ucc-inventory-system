@@ -17,28 +17,35 @@ class UserManagementController extends Controller
 
     public function index(Request $request)
     {
-        $authUser = auth()->user();
-        $search   = $request->get('search');
-        $roleFilter = $request->get('role');
+        $authUser     = auth()->user();
+        $search       = $request->get('search');
+        $roleFilter   = $request->get('role');
         $statusFilter = $request->get('status');
+        $sourceFilter = $request->get('source');
+        $campusFilter = $request->get('campus_id');
 
         $query = User::with(['campus', 'department'])
-            ->when($search, fn($q) => $q->where('name', 'like', "%$search%")->orWhere('email', 'like', "%$search%"))
+            ->when($search, fn($q) => $q->where('name', 'like', "%$search%")
+                ->orWhere('email', 'like', "%$search%"))
             ->when($roleFilter, fn($q) => $q->where('role', $roleFilter))
-            ->when($request->get('status') === 'pending', fn($q) => $q->where('status', 'pending'))
-            ->when($request->get('status') === 'active', fn($q) => $q->where('status', 'active'))
-            ->when($request->get('status') === '0', fn($q) => $q->where('is_active', false));
+            ->when($sourceFilter, fn($q) => $q->where('source', $sourceFilter))
+            ->when($campusFilter, fn($q) => $q->where('campus_id', $campusFilter))
+            ->when($statusFilter !== null && $statusFilter !== '',
+                fn($q) => $q->where('is_active', $statusFilter));
 
         // Admin cannot see superadmin accounts
         if ($authUser->role === 'admin') {
             $query->whereIn('role', ['user', 'admin']);
         }
 
-        $users       = $query->latest()->paginate(10);
+        $users       = $query->latest()->paginate(10)->withQueryString();
         $campuses    = Campus::where('is_active', true)->get();
         $departments = Department::where('is_active', true)->orderBy('department_name')->get();
 
-        return view('pages.users', compact('users', 'campuses', 'departments', 'authUser'));
+        return view('pages.users', compact(
+            'users', 'campuses', 'departments', 'authUser',
+            'search', 'roleFilter', 'statusFilter', 'sourceFilter', 'campusFilter'
+        ));
     }
 
     public function show(User $user)
@@ -64,7 +71,6 @@ class UserManagementController extends Controller
     {
         $authUser = auth()->user();
 
-        // Only superadmin can create admin/superadmin accounts
         $allowedRoles = ['user'];
         if ($authUser->role === 'superadmin') {
             $allowedRoles = ['user', 'admin', 'superadmin'];
@@ -75,6 +81,7 @@ class UserManagementController extends Controller
             'email'         => 'required|email|unique:users,email',
             'password'      => 'required|min:8|confirmed',
             'role'          => 'required|in:' . implode(',', $allowedRoles),
+            'source'        => 'required|in:ims,cs',
             'campus_id'     => 'nullable|exists:campuses,id',
             'department_id' => 'nullable|exists:departments,id',
             'phone'         => 'nullable|string|max:20',
@@ -85,10 +92,12 @@ class UserManagementController extends Controller
             'email'         => $request->email,
             'password'      => Hash::make($request->password),
             'role'          => $request->role,
+            'source'        => $request->source,
             'campus_id'     => $request->campus_id,
             'department_id' => $request->department_id,
             'phone'         => $request->phone,
             'is_active'     => true,
+            'status'        => 'active',
         ]);
 
         return back()->with('success', 'User account created successfully.');
@@ -98,12 +107,10 @@ class UserManagementController extends Controller
     {
         $authUser = auth()->user();
 
-        // Admin cannot edit superadmin accounts
         if ($authUser->role === 'admin' && $user->role === 'superadmin') {
             return back()->with('error', 'You cannot edit a Super Admin account.');
         }
 
-        // Admin cannot change roles to admin/superadmin
         $allowedRoles = $authUser->role === 'superadmin'
             ? ['user', 'admin', 'superadmin']
             : ['user'];
@@ -112,6 +119,7 @@ class UserManagementController extends Controller
             'name'          => 'required|string|max:255',
             'email'         => 'required|email|unique:users,email,' . $user->id,
             'role'          => 'required|in:' . implode(',', $allowedRoles),
+            'source'        => 'required|in:ims,cs',
             'campus_id'     => 'nullable|exists:campuses,id',
             'department_id' => 'nullable|exists:departments,id',
             'phone'         => 'nullable|string|max:20',
@@ -121,12 +129,19 @@ class UserManagementController extends Controller
             'name'          => $request->name,
             'email'         => $request->email,
             'role'          => $request->role,
+            'source'        => $request->source,
             'campus_id'     => $request->campus_id,
             'department_id' => $request->department_id,
             'phone'         => $request->phone,
         ]);
 
         return back()->with('success', 'User account updated successfully.');
+    }
+
+    public function approve(User $user)
+    {
+        $user->update(['status' => 'active']);
+        return back()->with('success', "Account for {$user->name} approved.");
     }
 
     public function archive(User $user)
@@ -142,7 +157,7 @@ class UserManagementController extends Controller
         }
 
         $user->update(['is_active' => !$user->is_active]);
-        $status = $user->is_active ? 'activated' : 'archived';
+        $status = $user->fresh()->is_active ? 'activated' : 'archived';
 
         return back()->with('success', "User account {$status} successfully.");
     }
@@ -151,7 +166,6 @@ class UserManagementController extends Controller
     {
         $authUser = auth()->user();
 
-        // Only superadmin can delete
         if ($authUser->role !== 'superadmin') {
             return back()->with('error', 'Only Super Admins can delete user accounts.');
         }
@@ -163,18 +177,5 @@ class UserManagementController extends Controller
         $user->delete();
 
         return back()->with('success', 'User account deleted permanently.');
-    }
-
-    public function approve(User $user)
-    {
-        $user->update(['status' => 'active']);
-
-        // Notify the user by email
-        \Illuminate\Support\Facades\Mail::to($user->email)
-            ->send(new \App\Mail\AccountApprovedMail($user));
-
-        \App\Models\ActivityLog::record('activate', 'User', "Approved account: {$user->email} (source: {$user->source})", 'user', $user->id);
-
-        return back()->with('success', "{$user->name}'s account has been approved.");
     }
 }

@@ -7,12 +7,13 @@
 <div class="hero-banner">
     <div class="hero-left">
         <div class="hero-greeting"><i class="ti ti-settings"></i> System Settings</div>
-        <p class="hero-sub">Manage your account security, monitor system health, publish version updates, and handle system configuration.</p>
+        <p class="hero-sub">Manage your account security, monitor system health, publish version updates, and configure system data.</p>
     </div>
 </div>
 
 <div class="settings-cards-grid">
 
+    {{-- Change Password --}}
     <a href="#" onclick="event.preventDefault(); document.getElementById('change-password-modal').classList.add('open');" class="settings-tile">
         <div class="settings-tile-icon" style="background:#eff6ff; color:#3b82f6;"><i class="ti ti-lock-password"></i></div>
         <div class="settings-tile-title">Change Password</div>
@@ -20,18 +21,29 @@
     </a>
 
     @if(auth()->user()->role === 'superadmin')
+
+    {{-- System Status --}}
     <a href="{{ route('system.status') }}" class="settings-tile">
         <div class="settings-tile-icon" style="background:#f0faf4; color:#1a6b3a;"><i class="ti ti-activity"></i></div>
         <div class="settings-tile-title">System Status</div>
         <div class="settings-tile-desc">Monitor uptime, toggle maintenance mode for IMS & CS, and review system logs.</div>
     </a>
-    @endif
 
+    {{-- Version History & Updates --}}
     <a href="{{ route('system.updates') }}" class="settings-tile">
         <div class="settings-tile-icon" style="background:#faf0ff; color:#7c3aed;"><i class="ti ti-git-branch"></i></div>
         <div class="settings-tile-title">Version History & Updates</div>
-        <div class="settings-tile-desc">Publish system update notes for IMS and CS. Toggle the login modal to notify users of new features.</div>
+        <div class="settings-tile-desc">Publish system update notes for IMS and CS. Toggle the login modal to notify users.</div>
     </a>
+
+    {{-- Managing System --}}
+    <a href="{{ route('manage.index') }}" class="settings-tile">
+        <div class="settings-tile-icon" style="background:#fff8f0; color:#ef9f27;"><i class="ti ti-database-cog"></i></div>
+        <div class="settings-tile-title">Managing System</div>
+        <div class="settings-tile-desc">Manage system data — departments, campuses, and other configurations.</div>
+    </a>
+
+    @endif
 
 </div>
 
