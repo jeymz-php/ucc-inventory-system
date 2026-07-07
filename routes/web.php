@@ -165,6 +165,7 @@ Route::middleware(['auth', 'role:admin,superadmin'])->group(function () {
 
     // ── Messages (CS User Tickets) ──
     Route::get('/messages',                        [ConversationController::class, 'index'])->name('messages.index');
+    Route::post('/messages/admin-start', [ConversationController::class, 'adminStart'])->name('messages.admin-start');
     Route::get('/messages/poll-all',               [ConversationController::class, 'pollAll'])->name('messages.poll-all');
     Route::get('/messages/{conversation}',         [ConversationController::class, 'show'])->name('messages.show');
     Route::post('/messages/{conversation}/reply',  [ConversationController::class, 'reply'])->name('messages.reply');
@@ -180,6 +181,7 @@ Route::middleware(['auth', 'role:admin,superadmin'])->group(function () {
 
     // Consumables (admin write operations)
     Route::post('/consumables',                                       [ConsumablesController::class, 'store'])->name('consumables.store');
+    Route::post('/consumables/{consumable}/deduct',                   [ConsumablesController::class, 'deduct'])->name('consumables.deduct');
     Route::put('/consumables/{consumable}',                           [ConsumablesController::class, 'update'])->name('consumables.update');
     Route::delete('/consumables/{consumable}',                        [ConsumablesController::class, 'destroy'])->name('consumables.destroy');
     Route::post('/consumable-requests/{consumableRequest}/review',    [ConsumableRequestController::class, 'review'])->name('consumable-requests.review');

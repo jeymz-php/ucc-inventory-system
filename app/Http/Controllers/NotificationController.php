@@ -90,39 +90,58 @@ class NotificationController extends Controller
             ->where('status', 'pending')
             ->latest()
             ->get()
-            ->map(function ($r) {
-                return [
-                    'type'       => 'deletion',
-                    'id'         => $r->id,
-                    'title'      => $r->user->name ?? 'Unknown User',
-                    'subtitle'   => $r->user->email ?? '',
-                    'reason'     => $r->reason,
-                    'created_at' => $r->created_at->diffForHumans(),
-                ];
-            });
+            ->map(fn($r) => [
+                'type'       => 'deletion',
+                'id'         => $r->id,
+                'title'      => $r->user->name ?? 'Unknown User',
+                'subtitle'   => $r->user->email ?? '',
+                'reason'     => $r->reason,
+                'created_at' => $r->created_at->diffForHumans(),
+            ]);
 
         $consumableRequests = ConsumableRequest::with('requester')
             ->where('status', 'pending')
             ->latest()
             ->get()
-            ->map(function ($r) {
-                return [
-                    'type'       => 'consumable',
-                    'id'         => $r->id,
-                    'title'      => $r->reference_no,
-                    'subtitle'   => $r->recipient_name . ' — ' . $r->department,
-                    'reason'     => null,
-                    'created_at' => $r->created_at->diffForHumans(),
-                ];
-            });
+            ->map(fn($r) => [
+                'type'       => 'consumable',
+                'id'         => $r->id,
+                'title'      => $r->reference_no,
+                'subtitle'   => $r->recipient_name . ' — ' . $r->department,
+                'reason'     => null,
+                'created_at' => $r->created_at->diffForHumans(),
+            ]);
 
-        $all = $deletionRequests->concat($consumableRequests)->values();
+        // CS user tickets — open conversations with unread user messages
+        $tickets = \App\Models\Conversation::with(['user', 'lastMessage'])
+            ->where('type', 'admin')
+            ->where('status', 'open')
+            ->whereHas('messages', fn($q) =>
+                $q->where('sender_type', 'user')->where('is_read', false)
+            )
+            ->latest()
+            ->get()
+            ->map(fn($c) => [
+                'type'       => 'ticket',
+                'id'         => $c->id,
+                'title'      => $c->ticket_no,
+                'subtitle'   => ($c->user->name ?? 'Unknown') . ' — ' . $c->subject,
+                'source'     => $c->user->source ?? 'cs',
+                'reason'     => null,
+                'created_at' => $c->created_at->diffForHumans(),
+            ]);
+
+        $all = $deletionRequests
+            ->concat($consumableRequests)
+            ->concat($tickets)
+            ->values();
 
         return response()->json([
-            'count'                => $all->count(),
-            'deletion_count'       => $deletionRequests->count(),
-            'consumable_count'     => $consumableRequests->count(),
-            'requests'             => $all,
+            'count'            => $all->count(),
+            'deletion_count'   => $deletionRequests->count(),
+            'consumable_count' => $consumableRequests->count(),
+            'ticket_count'     => $tickets->count(),
+            'requests'         => $all,
         ]);
     }
 

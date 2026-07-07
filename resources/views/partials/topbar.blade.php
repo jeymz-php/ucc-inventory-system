@@ -35,19 +35,28 @@
 
         {{-- Notifications (admin+) --}}
         @if(in_array(auth()->user()->role, ['admin', 'superadmin']))
-        <div style="position:relative;">
-            <a href="#" class="topbar-btn" title="Notifications" onclick="event.preventDefault(); toggleNotifDropdown();">
+        <div style="position:relative;" id="notif-wrap">
+            <a href="#" class="topbar-btn" title="Notifications"
+               onclick="event.preventDefault(); toggleNotifDropdown();">
                 <i class="ti ti-bell"></i>
-                <span id="notif-badge" style="display:none; position:absolute; top:-4px; right:-4px; background:#e24b4a; color:#fff; font-size:10px; font-weight:700; border-radius:50%; width:18px; height:18px; align-items:center; justify-content:center;">0</span>
+                <span id="notif-badge"
+                      style="display:none; position:absolute; top:-4px; right:-4px;
+                             background:#e24b4a; color:#fff; font-size:10px; font-weight:700;
+                             border-radius:50%; width:18px; height:18px;
+                             align-items:center; justify-content:center;">0</span>
             </a>
 
-            <div id="notif-dropdown" class="settings-dropdown" style="width:360px;">
+            {{-- Uses notif-dropdown-box — NOT settings-dropdown — to avoid CSS conflict --}}
+            <div id="notif-dropdown" class="notif-dropdown-box">
                 <div class="settings-header" style="display:flex; align-items:center; justify-content:space-between;">
                     <div>
                         <div class="settings-user-name">Notifications</div>
                         <div class="settings-user-email" id="notif-summary">No pending notifications</div>
                     </div>
-                    <a href="{{ route('notifications.index') }}" style="font-size:11px; color:var(--green-dark); font-weight:600; text-decoration:none;">View All →</a>
+                    <a href="{{ route('notifications.index') }}"
+                       style="font-size:11px; color:var(--green-dark); font-weight:600; text-decoration:none;">
+                        View All →
+                    </a>
                 </div>
                 <div id="notif-list" style="max-height:360px; overflow-y:auto;"></div>
             </div>
@@ -90,7 +99,6 @@
                     System Status
                 </a>
                 @endif
-                
             </div>
         </div>
 
@@ -104,11 +112,8 @@
             <div class="modal-title-sm"><i class="ti ti-lock-password"></i> Change Password</div>
             <button class="modal-close" onclick="closeChangePassword()"><i class="ti ti-x"></i></button>
         </div>
-
         <form method="POST" action="{{ route('password.change') }}" id="change-pass-form">
-            @csrf
-            @method('PUT')
-
+            @csrf @method('PUT')
             <div class="modal-form-group">
                 <div class="modal-label">Current Password</div>
                 <div class="modal-input-wrap">
@@ -117,9 +122,7 @@
                            placeholder="Enter current password" id="cur-pass">
                     <i class="ti ti-eye modal-input-right" onclick="toggleModalPass('cur-pass', this)"></i>
                 </div>
-                <div class="modal-hint" id="cur-pass-hint"></div>
             </div>
-
             <div class="modal-form-group">
                 <div class="modal-label">New Password</div>
                 <div class="modal-input-wrap">
@@ -134,9 +137,7 @@
                     <div class="modal-seg" id="ms3"></div>
                     <div class="modal-seg" id="ms4"></div>
                 </div>
-                <div class="modal-hint" id="new-pass-hint"></div>
             </div>
-
             <div class="modal-form-group">
                 <div class="modal-label">Confirm New Password</div>
                 <div class="modal-input-wrap">
@@ -147,7 +148,6 @@
                 </div>
                 <div class="modal-hint" id="conf-pass-hint"></div>
             </div>
-
             <button type="submit" class="modal-btn-primary">
                 <i class="ti ti-check"></i> Update Password
             </button>
@@ -156,207 +156,206 @@
 </div>
 
 <style>
-/* ── SETTINGS DROPDOWN ── */
-.settings-wrap { position: relative; }
-
-.settings-dropdown {
+/* Notification dropdown — separate from settings-dropdown to avoid conflict */
+.notif-dropdown-box {
     display: none;
     position: absolute;
     top: calc(100% + 8px);
     right: 0;
+    width: 360px;
     background: #fff;
     border: 1px solid var(--border);
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.12);
-    min-width: 220px;
-    z-index: 200;
+    z-index: 300;
     overflow: hidden;
     animation: dropIn 0.18s ease;
 }
-
-.settings-dropdown.open { display: block; }
-
-@keyframes dropIn {
-    from { opacity: 0; transform: translateY(-6px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-
-.settings-header {
-    padding: 0.85rem 1rem;
-    border-bottom: 1px solid var(--border);
-    background: var(--green-light);
-}
-
-.settings-user-name  { font-size: 13px; font-weight: 600; color: var(--text-primary); }
-.settings-user-email { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
-
-.settings-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 1rem;
-    font-size: 13px; font-weight: 500;
-    color: var(--text-secondary);
-    text-decoration: none;
-    transition: background 0.15s;
-    width: 100%; background: none;
-    border: none; cursor: pointer;
-    font-family: 'Inter', sans-serif;
-    text-align: left;
-}
-
-.settings-item:hover { background: var(--green-light); color: var(--green-dark); }
-.settings-item i { font-size: 16px; color: var(--green-dark); }
-
-.settings-logout { color: var(--red) !important; }
-.settings-logout i { color: var(--red) !important; }
-.settings-logout:hover { background: #fff5f5 !important; }
-
-.settings-divider { height: 1px; background: var(--border); margin: 4px 0; }
-
-/* ── CHANGE PASSWORD MODAL ── */
-/* .modal-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.45); z-index: 300;
-    align-items: center; justify-content: center;
-}
-.modal-overlay.open { display: flex; }
-
-.modal-box-sm {
-    background: #fff; border-radius: 14px;
-    padding: 1.5rem; width: 100%; max-width: 420px;
-    box-shadow: 0 24px 64px rgba(0,0,0,0.18);
-    animation: dropIn 0.2s ease;
-}
-
-.modal-header-row {
-    display: flex; align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1.25rem;
-}
-
-.modal-title-sm {
-    font-size: 16px; font-weight: 700;
-    color: var(--text-primary);
-    display: flex; align-items: center; gap: 8px;
-}
-.modal-title-sm i { color: var(--green-dark); }
-
-.modal-close {
-    width: 28px; height: 28px; border-radius: 6px;
-    border: 1px solid var(--border);
-    background: #fff; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    color: var(--text-muted); font-size: 14px;
-}
-.modal-close:hover { background: #fff5f5; color: var(--red); border-color: var(--red); }
-
-.modal-form-group { margin-bottom: 0.85rem; }
-
-.modal-label {
-    font-size: 11px; font-weight: 600;
-    text-transform: uppercase; letter-spacing: 1px;
-    color: #555; margin-bottom: 5px;
-}
-
-.modal-input-wrap { position: relative; }
-
-.modal-input-icon {
-    position: absolute; left: 10px; top: 50%;
-    transform: translateY(-50%);
-    color: #aaa; font-size: 14px; pointer-events: none;
-}
-
-.modal-input-right {
-    position: absolute; right: 10px; top: 50%;
-    transform: translateY(-50%);
-    color: #aaa; font-size: 14px; cursor: pointer;
-}
-
-.modal-input {
-    width: 100%; padding: 10px 34px;
-    border: 1.5px solid #e0e0e0; border-radius: 8px;
-    font-size: 13px; font-family: 'Inter', sans-serif;
-    color: #111; outline: none; transition: border-color 0.2s;
-}
-.modal-input:focus { border-color: var(--green-dark); }
-
-.modal-strength-bar { display: flex; gap: 4px; margin-top: 5px; }
-.modal-seg { flex: 1; height: 3px; border-radius: 2px; background: #e0e0e0; transition: background 0.3s; }
-
-.modal-hint { font-size: 11px; margin-top: 3px; }
-.modal-hint.error   { color: var(--red); }
-.modal-hint.success { color: var(--green-dark); }
-
-.modal-btn-primary {
-    width: 100%; padding: 11px;
-    background: var(--green-dark); color: #fff;
-    border: none; border-radius: 8px;
-    font-size: 14px; font-weight: 600;
-    cursor: pointer; font-family: 'Inter', sans-serif;
-    display: flex; align-items: center; justify-content: center;
-    gap: 8px; margin-top: 1rem;
-    transition: background 0.2s;
-}
-.modal-btn-primary:hover { background: #155a30; } */
+.notif-dropdown-box.open { display: block; }
 </style>
 
 <script>
-// Settings dropdown
-function toggleSettings() {
-    document.getElementById('settings-dropdown').classList.toggle('open');
+// ── SOUND ──
+function playNotifSound() {
+    try {
+        const ctx  = new (window.AudioContext || window.webkitAudioContext)();
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, ctx.currentTime);
+        osc.frequency.setValueAtTime(660, ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.25, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.45);
+    } catch(e) {}
 }
 
-// Close dropdown when clicking outside
+// ── NOTIFICATION DROPDOWN TOGGLE ──
+let prevNotifCount = 0;
+
+function toggleNotifDropdown() {
+    const dd = document.getElementById('notif-dropdown');
+    if (!dd) return;
+    const isOpen = dd.classList.contains('open');
+    // Close settings if open
+    const sd = document.getElementById('settings-dropdown');
+    if (sd) sd.classList.remove('open');
+    dd.classList.toggle('open', !isOpen);
+}
+
+// Close notif dropdown when clicking outside
 document.addEventListener('click', function(e) {
-    const wrap = document.getElementById('settings-wrap');
+    const wrap = document.getElementById('notif-wrap');
     if (wrap && !wrap.contains(e.target)) {
-        document.getElementById('settings-dropdown').classList.remove('open');
+        const dd = document.getElementById('notif-dropdown');
+        if (dd) dd.classList.remove('open');
     }
 });
 
-// Change password modal
-function openChangePassword() {
-    document.getElementById('settings-dropdown').classList.remove('open');
-    document.getElementById('change-password-modal').classList.add('open');
+function getReadNotifIds() {
+    try { return JSON.parse(localStorage.getItem('read_notif_ids_ims') || '[]'); }
+    catch (e) { return []; }
 }
 
-function closeChangePassword() {
-    document.getElementById('change-password-modal').classList.remove('open');
+function markNotifAsRead(type, id) {
+    const key     = `${type}-${id}`;
+    const readIds = getReadNotifIds();
+    if (!readIds.includes(key)) {
+        readIds.push(key);
+        localStorage.setItem('read_notif_ids_ims', JSON.stringify(readIds));
+    }
 }
 
-function toggleModalPass(id, icon) {
-    const inp = document.getElementById(id);
-    if (inp.type === 'password') { inp.type = 'text'; icon.classList.replace('ti-eye','ti-eye-off'); }
-    else { inp.type = 'password'; icon.classList.replace('ti-eye-off','ti-eye'); }
+async function pollNotifications() {
+    const badge   = document.getElementById('notif-badge');
+    const list    = document.getElementById('notif-list');
+    const summary = document.getElementById('notif-summary');
+    if (!badge) return;
+
+    try {
+        const res     = await fetch('{{ route("notifications.poll") }}');
+        const data    = await res.json();
+        const readIds = getReadNotifIds();
+
+        const unreadCount = (data.requests || []).filter(r =>
+            !readIds.includes(`${r.type}-${r.id}`)
+        ).length;
+
+        // Sound on new notification
+        if (unreadCount > prevNotifCount && prevNotifCount !== 0) {
+            playNotifSound();
+        }
+        prevNotifCount = unreadCount;
+
+        if (unreadCount > 0) {
+            badge.style.display = 'flex';
+            badge.textContent   = unreadCount;
+            const parts = [];
+            if (data.deletion_count  > 0) parts.push(`${data.deletion_count} account deletion`);
+            if (data.consumable_count > 0) parts.push(`${data.consumable_count} consumable request`);
+            if (data.ticket_count    > 0) parts.push(`${data.ticket_count} new ticket(s)`);
+            summary.textContent = parts.join(', ') || `${unreadCount} pending`;
+        } else {
+            badge.style.display = 'none';
+            summary.textContent = data.count > 0 ? 'All caught up' : 'No pending notifications';
+        }
+
+        list.innerHTML = (data.requests || []).map(r => {
+            const isRead   = readIds.includes(`${r.type}-${r.id}`);
+            const rowStyle = isRead ? 'opacity:0.55;' : '';
+            const dot      = !isRead
+                ? '<span style="width:7px;height:7px;border-radius:50%;background:var(--red);display:inline-block;margin-left:4px;"></span>'
+                : '';
+
+            if (r.type === 'deletion') {
+                return `
+                <div style="padding:12px 16px; border-bottom:1px solid var(--border); ${rowStyle}">
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                        <span style="font-size:9px; font-weight:700; background:#fff5f5; color:#e24b4a; padding:2px 7px; border-radius:10px; text-transform:uppercase;">Account Deletion</span>
+                        ${dot}
+                    </div>
+                    <div style="font-size:13px; font-weight:600; color:var(--text-primary);">${r.title}</div>
+                    <div style="font-size:11px; color:var(--text-muted); margin:2px 0 6px;">${r.subtitle} • ${r.created_at}</div>
+                    ${r.reason ? `<div style="font-size:12px; color:#666; margin-bottom:8px; font-style:italic;">"${r.reason}"</div>` : ''}
+                    <div style="display:flex; gap:6px;">
+                        <button onclick="approveDeletion(${r.id})"
+                                style="flex:1; padding:6px; border:none; border-radius:6px; background:#fff5f5; color:#e24b4a; font-size:11.5px; font-weight:600; cursor:pointer; font-family:inherit;">
+                            <i class="ti ti-check"></i> Approve & Delete
+                        </button>
+                        <button onclick="rejectDeletion(${r.id})"
+                                style="flex:1; padding:6px; border:none; border-radius:6px; background:#f0faf4; color:#1a6b3a; font-size:11.5px; font-weight:600; cursor:pointer; font-family:inherit;">
+                            <i class="ti ti-x"></i> Reject
+                        </button>
+                    </div>
+                </div>`;
+
+            } else if (r.type === 'ticket') {
+                const sourceBadge = r.source === 'ims'
+                    ? '<span style="font-size:9px;font-weight:700;background:#f0faf4;color:#1a6b3a;padding:2px 6px;border-radius:6px;">IMS</span>'
+                    : '<span style="font-size:9px;font-weight:700;background:#eff6ff;color:#1a56db;padding:2px 6px;border-radius:6px;">CS</span>';
+                return `
+                <div style="padding:12px 16px; border-bottom:1px solid var(--border); ${rowStyle}">
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                        <span style="font-size:9px; font-weight:700; background:#f4f0ff; color:#7c3aed; padding:2px 7px; border-radius:10px; text-transform:uppercase;">New Ticket</span>
+                        ${sourceBadge}
+                        ${dot}
+                    </div>
+                    <div style="font-size:13px; font-weight:600; color:var(--text-primary);">${r.title}</div>
+                    <div style="font-size:11px; color:var(--text-muted); margin:2px 0 8px;">${r.subtitle} • ${r.created_at}</div>
+                    <a href="{{ url('/messages') }}/${r.id}"
+                    onclick="markNotifAsRead('ticket', ${r.id})"
+                    style="display:block; text-align:center; padding:6px; border-radius:6px; background:#f4f0ff; color:#7c3aed; font-size:11.5px; font-weight:600; text-decoration:none;">
+                        <i class="ti ti-message-circle"></i> Open Ticket
+                    </a>
+                </div>`;
+
+            } else {
+                return `
+                <div style="padding:12px 16px; border-bottom:1px solid var(--border); ${rowStyle}">
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                        <span style="font-size:9px; font-weight:700; background:#eff6ff; color:#3b82f6; padding:2px 7px; border-radius:10px; text-transform:uppercase;">Consumable Request</span>
+                        ${dot}
+                    </div>
+                    <div style="font-size:13px; font-weight:600; color:var(--text-primary);">${r.title}</div>
+                    <div style="font-size:11px; color:var(--text-muted); margin:2px 0 8px;">${r.subtitle} • ${r.created_at}</div>
+                    <a href="#" onclick="reviewConsumableRequest(event, ${r.id})"
+                    style="display:block; text-align:center; padding:6px; border-radius:6px; background:#eff6ff; color:#3b82f6; font-size:11.5px; font-weight:600; text-decoration:none;">
+                        <i class="ti ti-eye"></i> Review Request
+                    </a>
+                </div>`;
+            }
+        }).join('') || '<div style="padding:20px; text-align:center; font-size:12px; color:#999;">No pending notifications.</div>';
+
+    } catch (e) { /* silent fail */ }
 }
 
-function modalStrength() {
-    const val  = document.getElementById('new-pass').value;
-    const segs = ['ms1','ms2','ms3','ms4'].map(id => document.getElementById(id));
-    let score  = 0;
-    if (val.length >= 8)          score++;
-    if (/[A-Z]/.test(val))        score++;
-    if (/[0-9]/.test(val))        score++;
-    if (/[^A-Za-z0-9]/.test(val)) score++;
-    const colors = ['#e24b4a','#ef9f27','#1D9E75','#1a6b3a'];
-    segs.forEach((s,i) => s.style.background = i < score ? colors[score-1] : '#e0e0e0');
+function reviewConsumableRequest(e, id) {
+    e.preventDefault();
+    markNotifAsRead('consumable', id);
+    pollNotifications();
+    window.location.href = `{{ route('consumable-requests') }}?highlight=${id}`;
 }
 
-function modalMatch() {
-    const pass  = document.getElementById('new-pass').value;
-    const conf  = document.getElementById('conf-pass').value;
-    const hint  = document.getElementById('conf-pass-hint');
-    if (!conf) { hint.textContent = ''; return; }
-    if (pass === conf) { hint.textContent = 'Passwords match.'; hint.className = 'modal-hint success'; }
-    else               { hint.textContent = 'Passwords do not match.'; hint.className = 'modal-hint error'; }
+async function approveDeletion(id) {
+    if (!confirm('Permanently delete this user account? This cannot be undone.')) return;
+    await fetch(`/notifications/${id}/approve`, {
+        method: 'POST', headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+    });
+    pollNotifications();
 }
 
-// Mobile menu
-if (window.innerWidth <= 768) {
-    const btn = document.getElementById('menu-btn');
-    if (btn) btn.style.display = 'flex';
+async function rejectDeletion(id) {
+    await fetch(`/notifications/${id}/reject`, {
+        method: 'POST', headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+    });
+    pollNotifications();
 }
-window.addEventListener('resize', () => {
-    const btn = document.getElementById('menu-btn');
-    if (btn) btn.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
-});
+
+if (document.getElementById('notif-badge')) {
+    pollNotifications();
+    setInterval(pollNotifications, 8000);
+}
 </script>

@@ -17,7 +17,7 @@ class ConversationController extends Controller
     {
         $status = $request->get('status', 'open');
 
-        $conversations = Conversation::with(['user', 'lastMessage'])
+        $conversations = \App\Models\Conversation::with(['user', 'lastMessage'])
             ->where('type', 'admin')
             ->when($status !== 'all', fn($q) => $q->where('status', $status))
             ->latest()
@@ -25,14 +25,51 @@ class ConversationController extends Controller
             ->withQueryString();
 
         $stats = [
-            'open'     => Conversation::where('type', 'admin')->where('status', 'open')->count(),
-            'resolved' => Conversation::where('type', 'admin')->where('status', 'resolved')->count(),
-            'unread'   => Conversation::where('type', 'admin')
-                ->whereHas('messages', fn($q) => $q->where('sender_type', 'user')->where('is_read', false))
+            'open'     => \App\Models\Conversation::where('type','admin')->where('status','open')->count(),
+            'resolved' => \App\Models\Conversation::where('type','admin')->where('status','resolved')->count(),
+            'unread'   => \App\Models\Conversation::where('type','admin')
+                ->whereHas('messages', fn($q) => $q->where('sender_type','user')->where('is_read',false))
                 ->count(),
         ];
 
-        return view('pages.messages', compact('conversations', 'stats', 'status'));
+        // All users admin can message (both IMS and CS)
+        $allUsers = \App\Models\User::whereIn('source', ['ims','cs'])
+            ->where('status', 'active')
+            ->where('is_active', true)
+            ->whereNotIn('role', ['superadmin'])
+            ->orderBy('name')
+            ->get(['id','name','email','source','role']);
+
+        return view('pages.messages', compact('conversations', 'stats', 'status', 'allUsers'));
+    }
+
+    // Admin initiates a new conversation with any user
+    public function adminStart(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'subject' => 'required|string|max:200',
+            'body'    => 'required|string|max:2000',
+        ]);
+
+        $conversation = \App\Models\Conversation::create([
+            'ticket_no' => \App\Models\Conversation::generateTicketNo(),
+            'user_id'   => $request->user_id,
+            'type'      => 'admin',
+            'status'    => 'open',
+            'subject'   => $request->subject,
+        ]);
+
+        \App\Models\Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_id'       => auth()->id(),
+            'sender_type'     => 'admin',
+            'body'            => $request->body,
+            'is_read'         => false,
+        ]);
+
+        return redirect()->route('messages.show', $conversation)
+            ->with('success', "Conversation {$conversation->ticket_no} started.");
     }
 
     public function show(Conversation $conversation)
