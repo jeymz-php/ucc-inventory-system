@@ -36,7 +36,12 @@ use App\Http\Controllers\CampusController;
 // Landing page
 // ──────────────────────────────────────────────
 Route::get('/', function () {
-    return view('welcome');
+    $justRestored = null;
+    $status = \App\Models\SystemStatus::current('ims');
+    if ($status && $status->status === 'up' && $status->changed_at && $status->changed_at->gt(now()->subMinutes(10))) {
+        $justRestored = $status;
+    }
+    return view('welcome', compact('justRestored'));
 })->name('home');
 
 // ──────────────────────────────────────────────

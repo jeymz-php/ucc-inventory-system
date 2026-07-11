@@ -304,16 +304,86 @@
         }
         .modal-close:hover { background: #fff5f5; color: #e24b4a; border-color: #e24b4a; }
 
-        /* ── RESPONSIVE ── */
+        /* ── System Restored Toast ── */
+        .system-up-toast {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            z-index: 400;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            background: #fff;
+            border-left: 4px solid #1a6b3a;
+            border-radius: 10px;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.16);
+            padding: 14px 16px;
+            max-width: 340px;
+            animation: toastSlideIn 0.35s ease;
+        }
+        .system-up-toast.toast-hide {
+            animation: toastSlideOut 0.35s ease forwards;
+        }
+        @keyframes toastSlideIn {
+            from { transform: translateX(30px); opacity: 0; }
+            to   { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes toastSlideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to   { transform: translateX(30px); opacity: 0; }
+        }
+        .toast-icon {
+            width: 34px; height: 34px;
+            border-radius: 50%;
+            background: #f0faf4;
+            color: #1a6b3a;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 17px;
+            flex-shrink: 0;
+        }
+        .toast-title { font-size: 13px; font-weight: 700; color: #111; margin-bottom: 2px; }
+        .toast-reason { font-size: 12px; color: #666; line-height: 1.4; }
+        .toast-close {
+            background: none; border: none; cursor: pointer;
+            color: #bbb; font-size: 13px; padding: 2px;
+            flex-shrink: 0; margin-left: auto;
+        }
+        .toast-close:hover { color: #888; }
+
         @media (max-width: 640px) {
             .landing-wrap { flex-direction: column; height: auto; }
             .left-panel   { padding: 2rem; min-height: 220px; }
             .right-panel  { padding: 2rem 1.5rem; }
             .left-dots    { display: none; }
+            .system-up-toast { left: 1rem; right: 1rem; max-width: none; top: 1rem; }
         }
     </style>
 </head>
 <body>
+
+@if($justRestored ?? null)
+<div class="system-up-toast" id="system-up-toast">
+    <div class="toast-icon"><i class="ti ti-circle-check"></i></div>
+    <div style="flex:1;">
+        <div class="toast-title">System is back online</div>
+        <div class="toast-reason">{{ $justRestored->reason ?? 'The system has been restored and is now accessible.' }}</div>
+    </div>
+    <button class="toast-close" onclick="dismissSystemToast()"><i class="ti ti-x"></i></button>
+</div>
+<script>
+    (function() {
+        const toast = document.getElementById('system-up-toast');
+        if (!toast) return;
+        setTimeout(function() { dismissSystemToast(); }, 6000);
+    })();
+    function dismissSystemToast() {
+        const toast = document.getElementById('system-up-toast');
+        if (!toast) return;
+        toast.classList.add('toast-hide');
+        setTimeout(function() { toast.remove(); }, 350);
+    }
+</script>
+@endif
 
 <div class="landing-wrap">
 

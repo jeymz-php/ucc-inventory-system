@@ -141,7 +141,7 @@ July 8, 2026 - Part I
 - IMS User page can now set the user source IMS or CS, including of adding/editing the user account
 - Users from originated UCC - IMS migrated to Improvised UCC - IMS (Local first) to test if the CS users can log in to the Improvised UCC - CS
 
-July 11, 2026 - FINAL DEVELOPMENT AS OF 6:34pm
+July 11, 2026 - FINAL DEVELOPMENT AS OF 8:33pm
 
 - Out of Stock from Consumable items can notify
 - Admin/Super Admin can now edit the requested consumable item
@@ -152,3 +152,5 @@ July 11, 2026 - FINAL DEVELOPMENT AS OF 6:34pm
 2. All Equipment page
 3. Consumable System - Browse Item page
 4. Request History of Consumable page (from IMS)
+- Bubble Notification implemented in welcome page to see the system update after system are UP
+- QR Code/Generator for Scanning the QR of Consumable System implemented'
