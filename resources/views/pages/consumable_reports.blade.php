@@ -156,26 +156,137 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-const monthlyData = {!! json_encode(array_values($monthlyTrend)) !!};
-const topItemsLabels = {!! json_encode($topItems->keys()) !!};
-const topItemsData = {!! json_encode($topItems->values()) !!};
+// Use IIFE to avoid variable conflicts
+(function() {
+    'use strict';
 
-new Chart(document.getElementById('monthlyChart'), {
-    type: 'bar',
-    data: {
-        labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
-        datasets: [{ label: 'Items Released', data: monthlyData, backgroundColor: '#1a6b3a', borderRadius: 6 }]
-    },
-    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
-});
+    // Wait for DOM to be fully loaded
+    function ready(fn) {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', fn);
+        } else {
+            fn();
+        }
+    }
 
-new Chart(document.getElementById('topItemsChart'), {
-    type: 'doughnut',
-    data: {
-        labels: topItemsLabels,
-        datasets: [{ data: topItemsData, backgroundColor: ['#1a6b3a','#3b82f6','#ef9f27','#e24b4a','#7c3aed','#20c997','#f4b942','#94a3b8'] }]
-    },
-    options: { responsive: true, plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } } } }
-});
+    ready(function() {
+        // Check if Chart.js is loaded
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js is not loaded');
+            return;
+        }
+
+        // ── MONTHLY CHART ──
+        const monthlyCanvas = document.getElementById('monthlyChart');
+        if (monthlyCanvas) {
+            try {
+                const monthlyData = {!! json_encode(array_values($monthlyTrend)) !!};
+                
+                new Chart(monthlyCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+                        datasets: [{
+                            label: 'Items Released',
+                            data: monthlyData,
+                            backgroundColor: '#1a6b3a',
+                            borderRadius: 6,
+                            borderSkipped: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(0,0,0,0.05)'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false
+                                }
+                            }
+                        }
+                    }
+                });
+                console.log('Monthly chart created successfully');
+            } catch(e) {
+                console.error('Error creating monthly chart:', e);
+            }
+        } else {
+            console.warn('Monthly chart canvas not found');
+        }
+
+        // ── TOP ITEMS CHART ──
+        const topItemsCanvas = document.getElementById('topItemsChart');
+        if (topItemsCanvas) {
+            try {
+                const topItemsLabels = {!! json_encode($topItems->keys()) !!};
+                const topItemsData = {!! json_encode($topItems->values()) !!};
+                
+                // Define colors for the chart
+                const colors = [
+                    '#1a6b3a', // green
+                    '#3b82f6', // blue
+                    '#ef9f27', // orange
+                    '#e24b4a', // red
+                    '#7c3aed', // purple
+                    '#20c997', // teal
+                    '#f4b942', // yellow
+                    '#94a3b8', // gray
+                    '#ec4899', // pink
+                    '#14b8a6'  // cyan
+                ];
+
+                // Only show top 10 items max
+                const labels = topItemsLabels.slice(0, 10);
+                const data = topItemsData.slice(0, 10);
+                const bgColors = colors.slice(0, labels.length);
+
+                new Chart(topItemsCanvas, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: bgColors,
+                            borderWidth: 2,
+                            borderColor: '#fff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    boxWidth: 12,
+                                    padding: 10,
+                                    font: { size: 11, family: "'Inter', sans-serif" },
+                                    usePointStyle: true,
+                                    pointStyle: 'circle'
+                                }
+                            }
+                        },
+                        cutout: '55%'
+                    }
+                });
+                console.log('Top items chart created successfully');
+            } catch(e) {
+                console.error('Error creating top items chart:', e);
+            }
+        } else {
+            console.warn('Top items chart canvas not found');
+        }
+    });
+
+})(); // End of IIFE
 </script>
 @endpush

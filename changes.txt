@@ -140,3 +140,15 @@ July 8, 2026 - Part I
 - Managing Departments and Campus under the Managing System implemented, can manage the departments and campuses
 - IMS User page can now set the user source IMS or CS, including of adding/editing the user account
 - Users from originated UCC - IMS migrated to Improvised UCC - IMS (Local first) to test if the CS users can log in to the Improvised UCC - CS
+
+July 11, 2026 - FINAL DEVELOPMENT AS OF 6:34pm
+
+- Out of Stock from Consumable items can notify
+- Admin/Super Admin can now edit the requested consumable item
+- Admin/Super Admin can generate blank receipt with specific item rows
+- Approved and Released Date added on Consumables
+- Search bars and filterings of the following are fixed:
+1. Condemned page
+2. All Equipment page
+3. Consumable System - Browse Item page
+4. Request History of Consumable page (from IMS)

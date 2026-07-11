@@ -147,6 +147,7 @@ class ConsumableRequestController extends Controller
             'items'                    => 'required|array',
             'items.*.id'               => 'required|exists:consumable_request_items,id',
             'items.*.decision'         => 'required|in:approved,rejected',
+            'items.*.release_date'     => 'nullable|date',
             'items.*.rejection_reason' => 'nullable|string|max:500',
         ]);
 
@@ -159,6 +160,9 @@ class ConsumableRequestController extends Controller
 
             $item->update([
                 'status'           => $itemData['decision'],
+                'release_date'     => $itemData['decision'] === 'approved'
+                    ? ($itemData['release_date'] ?? null)
+                    : null,
                 'rejection_reason' => $itemData['decision'] === 'rejected'
                     ? ($itemData['rejection_reason'] ?? null)
                     : null,
@@ -188,18 +192,19 @@ class ConsumableRequestController extends Controller
     public function update(Request $request, ConsumableRequest $consumableRequest)
     {
         $request->validate([
-            'recipient_last_name'  => 'required|string|max:100',
-            'recipient_first_name' => 'required|string|max:100',
-            'department'           => 'required|string|max:150',
-            'approved_by'          => 'nullable|string|max:150',
-            'supply_officer'       => 'nullable|string|max:150',
-            'status'               => 'required|in:pending,approved,rejected,partial',
-            'items'                => 'required|array|min:1',
-            'items.*.id'           => 'nullable|exists:consumable_request_items,id',
-            'items.*.consumable_id'=> 'required|exists:consumables,id',
-            'items.*.quantity'     => 'required|integer|min:1',
-            'items.*.purpose'      => 'nullable|string|max:255',
-            'items.*.status'       => 'required|in:pending,approved,rejected',
+            'recipient_last_name'   => 'required|string|max:100',
+            'recipient_first_name'  => 'required|string|max:100',
+            'department'            => 'required|string|max:150',
+            'approved_by'           => 'nullable|string|max:150',
+            'supply_officer'        => 'nullable|string|max:150',
+            'status'                => 'required|in:pending,approved,rejected,partial',
+            'items'                 => 'required|array|min:1',
+            'items.*.id'            => 'nullable|integer|exists:consumable_request_items,id',
+            'items.*.consumable_id' => 'required|exists:consumables,id',
+            'items.*.quantity'      => 'required|integer|min:1',
+            'items.*.purpose'       => 'nullable|string|max:255',
+            'items.*.release_date'  => 'nullable|date',
+            'items.*.status'        => 'required|in:pending,approved,rejected',
         ]);
 
         $authUser = auth()->user();
@@ -209,41 +214,91 @@ class ConsumableRequestController extends Controller
             'department', 'approved_by', 'supply_officer',
         ]));
 
+        $submittedIds = [];
+
         foreach ($request->items as $itemData) {
-            if (empty($itemData['id'])) continue;
-
-            $item = ConsumableRequestItem::find($itemData['id']);
-            if (!$item || $item->consumable_request_id !== $consumableRequest->id) continue;
-
-            $wasApproved   = $item->status === 'approved';
             $isNowApproved = $itemData['status'] === 'approved';
 
-            // Quantity change on already-approved item → adjust stock
-            if ($wasApproved && $isNowApproved && $item->quantity != $itemData['quantity']) {
-                $diff       = $itemData['quantity'] - $item->quantity;
-                $consumable = $item->consumable;
-                $previous   = $consumable->current_stock;
-                $newTotal   = max(0, $previous - $diff);
+            // ── EXISTING ITEM: update in place ──
+            if (!empty($itemData['id'])) {
+                $item = ConsumableRequestItem::find($itemData['id']);
+                if (!$item || $item->consumable_request_id !== $consumableRequest->id) continue;
 
-                $consumable->update(['current_stock' => $newTotal]);
-                ConsumableStockLog::create([
-                    'consumable_id'  => $consumable->id,
-                    'action'         => 'adjustment',
-                    'change_amount'  => -$diff,
-                    'previous_total' => $previous,
-                    'new_total'      => $newTotal,
-                    'user_id'        => $authUser->id,
+                $submittedIds[] = $item->id;
+                $wasApproved    = $item->status === 'approved';
+
+                // Quantity change on already-approved item → adjust stock
+                if ($wasApproved && $isNowApproved && $item->quantity != $itemData['quantity']) {
+                    $diff       = $itemData['quantity'] - $item->quantity;
+                    $consumable = $item->consumable;
+                    $previous   = $consumable->current_stock;
+                    $newTotal   = max(0, $previous - $diff);
+
+                    $consumable->update(['current_stock' => $newTotal]);
+                    ConsumableStockLog::create([
+                        'consumable_id'  => $consumable->id,
+                        'action'         => 'adjustment',
+                        'change_amount'  => -$diff,
+                        'previous_total' => $previous,
+                        'new_total'      => $newTotal,
+                        'user_id'        => $authUser->id,
+                    ]);
+                }
+
+                // Newly approved → deduct stock
+                if (!$wasApproved && $isNowApproved) {
+                    $item->quantity = $itemData['quantity'];
+                    $this->deductStock($item, $authUser);
+                }
+
+                // Was approved, now un-approved → restock
+                if ($wasApproved && !$isNowApproved) {
+                    $consumable = $item->consumable;
+                    $previous   = $consumable->current_stock;
+                    $newTotal   = $previous + $item->quantity;
+
+                    $consumable->update(['current_stock' => $newTotal]);
+                    ConsumableStockLog::create([
+                        'consumable_id'  => $consumable->id,
+                        'action'         => 'adjustment',
+                        'change_amount'  => $item->quantity,
+                        'previous_total' => $previous,
+                        'new_total'      => $newTotal,
+                        'user_id'        => $authUser->id,
+                    ]);
+                }
+
+                $item->update([
+                    'consumable_id' => $itemData['consumable_id'],
+                    'quantity'      => $itemData['quantity'],
+                    'purpose'       => $itemData['purpose'] ?? null,
+                    'release_date'  => $itemData['release_date'] ?? null,
+                    'status'        => $itemData['status'],
                 ]);
+
+                continue;
             }
 
-            // Newly approved → deduct stock
-            if (!$wasApproved && $isNowApproved) {
-                $item->quantity = $itemData['quantity'];
-                $this->deductStock($item, $authUser);
-            }
+            // ── NEW ITEM (added via "Add Another Item") ──
+            $newItem = ConsumableRequestItem::create([
+                'consumable_request_id' => $consumableRequest->id,
+                'consumable_id'         => $itemData['consumable_id'],
+                'quantity'              => $itemData['quantity'],
+                'purpose'               => $itemData['purpose'] ?? null,
+                'release_date'          => $itemData['release_date'] ?? null,
+                'status'                => $itemData['status'],
+            ]);
+            $submittedIds[] = $newItem->id;
 
-            // Was approved, now un-approved → restock
-            if ($wasApproved && !$isNowApproved) {
+            if ($isNowApproved) {
+                $this->deductStock($newItem, $authUser);
+            }
+        }
+
+        // ── REMOVED ITEMS: any existing item not resubmitted was deleted client-side ──
+        $itemsToDelete = $consumableRequest->items()->whereNotIn('id', $submittedIds)->get();
+        foreach ($itemsToDelete as $item) {
+            if ($item->status === 'approved') {
                 $consumable = $item->consumable;
                 $previous   = $consumable->current_stock;
                 $newTotal   = $previous + $item->quantity;
@@ -258,18 +313,12 @@ class ConsumableRequestController extends Controller
                     'user_id'        => $authUser->id,
                 ]);
             }
-
-            $item->update([
-                'consumable_id' => $itemData['consumable_id'],
-                'quantity'      => $itemData['quantity'],
-                'purpose'       => $itemData['purpose'] ?? null,
-                'status'        => $itemData['status'],
-            ]);
+            $item->delete();
         }
 
         $items       = $consumableRequest->fresh()->items;
-        $allApproved = $items->every(fn($i) => $i->status === 'approved');
-        $allRejected = $items->every(fn($i) => $i->status === 'rejected');
+        $allApproved = $items->isNotEmpty() && $items->every(fn($i) => $i->status === 'approved');
+        $allRejected = $items->isNotEmpty() && $items->every(fn($i) => $i->status === 'rejected');
 
         $finalStatus = $request->status;
         if ($finalStatus === 'approved' && !$allApproved && !$allRejected) {
@@ -315,14 +364,17 @@ class ConsumableRequestController extends Controller
         return $pdf->stream('Release-Report-' . $consumableRequest->reference_no . '.pdf');
     }
 
-    public function blankReport()
+    public function blankReport(Request $request)
     {
-        $payload = $this->buildReportPayload(null, true);
+        $rows = (int) $request->get('rows', 10);
+        $rows = max(1, min(100, $rows));
+
+        $payload = $this->buildReportPayload(null, true, $rows);
         $pdf = \PDF::loadView('pdf.consumable_release_report', $payload);
         return $pdf->stream('Blank-Consumable-Release-Receipt.pdf');
     }
 
-    private function buildReportPayload(?ConsumableRequest $consumableRequest, bool $blankReceipt): array
+    private function buildReportPayload(?ConsumableRequest $consumableRequest, bool $blankReceipt, int $blankRows = 10): array
     {
         $publicRoot       = dirname(__DIR__, 3) . '/public';
         $headerLogoPath   = $publicRoot . '/images/ucc.png';
@@ -373,6 +425,7 @@ class ConsumableRequestController extends Controller
             'headerLogoBase64'  => $headerLogoBase64,
             'footerLogoBase64'  => $footerLogoBase64,
             'blankReceipt'      => $blankReceipt,
+            'blankRows'         => $blankRows,
             'referenceNo'       => $blankReceipt ? '' : ($request->reference_no ?? ''),
             'recipientName'     => $blankReceipt ? '' : ($request->recipient_name ?? ''),
         ];

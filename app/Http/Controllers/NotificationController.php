@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AccountDeletionRequest;
+use App\Models\Consumable;
 use App\Models\ConsumableRequest;
 use Illuminate\Http\Request;
 
@@ -50,13 +51,36 @@ class NotificationController extends Controller
                 'raw'         => $r,
             ]);
 
+        // Out-of-stock consumables — always "pending" in the sense that they need
+        // attention; they have no approve/reject workflow, they just resolve
+        // automatically once restocked, so they only show under pending/all.
+        $stockOuts = collect();
+        if ($status === 'pending' || $status === 'all') {
+            $stockOuts = Consumable::with('category')
+                ->where('current_stock', '<=', 0)
+                ->get()
+                ->map(fn($c) => [
+                    'id'          => $c->id,
+                    'type'        => 'stock',
+                    'title'       => $c->item_name,
+                    'subtitle'    => $c->category->name ?? 'Uncategorized',
+                    'detail'      => 'Current stock: 0 ' . $c->unit,
+                    'status'      => 'pending',
+                    'reviewed_by' => '—',
+                    'created_at'  => $c->updated_at,
+                    'raw'         => $c,
+                ]);
+        }
+
         // Merge and sort by latest first
         if ($type === 'deletion') {
             $merged = $deletions;
         } elseif ($type === 'consumable') {
             $merged = $consumables;
+        } elseif ($type === 'stock') {
+            $merged = $stockOuts;
         } else {
-            $merged = $deletions->concat($consumables);
+            $merged = $deletions->concat($consumables)->concat($stockOuts);
         }
 
         $merged = $merged->sortByDesc('created_at')->values();
@@ -74,7 +98,8 @@ class NotificationController extends Controller
 
         $stats = [
             'pending'  => $deletions->where('status', 'pending')->count()
-                        + $consumables->where('status', 'pending')->count(),
+                        + $consumables->where('status', 'pending')->count()
+                        + Consumable::where('current_stock', '<=', 0)->count(),
             'approved' => $deletions->where('status', 'approved')->count()
                         + $consumables->whereIn('status', ['approved', 'partial'])->count(),
             'rejected' => $deletions->where('status', 'rejected')->count()
@@ -131,9 +156,26 @@ class NotificationController extends Controller
                 'created_at' => $c->created_at->diffForHumans(),
             ]);
 
+        // Out-of-stock consumables — derived live from current stock levels,
+        // so an item drops off this list automatically once it's restocked
+        // (regardless of whether the deduction happened via IMS or CS).
+        $stockOuts = Consumable::with('category')
+            ->where('current_stock', '<=', 0)
+            ->latest('updated_at')
+            ->get()
+            ->map(fn($c) => [
+                'type'       => 'stock',
+                'id'         => $c->id,
+                'title'      => $c->item_name,
+                'subtitle'   => $c->category->name ?? 'Uncategorized',
+                'reason'     => null,
+                'created_at' => $c->updated_at->diffForHumans(),
+            ]);
+
         $all = $deletionRequests
             ->concat($consumableRequests)
             ->concat($tickets)
+            ->concat($stockOuts)
             ->values();
 
         return response()->json([
@@ -141,6 +183,7 @@ class NotificationController extends Controller
             'deletion_count'   => $deletionRequests->count(),
             'consumable_count' => $consumableRequests->count(),
             'ticket_count'     => $tickets->count(),
+            'stock_count'      => $stockOuts->count(),
             'requests'         => $all,
         ]);
     }

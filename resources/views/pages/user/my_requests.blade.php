@@ -129,12 +129,13 @@ async function viewMyRequestDetails(id) {
         <div class="detail-section">
         <br>
             <div class="detail-section-title"><i class="ti ti-list"></i> Requested Items</div>
-            <table class="data-table"><thead><tr><th>Item</th><th>Qty</th><th>Purpose</th><th>Status</th><th>Reason (if rejected)</th></tr></thead><tbody>
+            <table class="data-table"><thead><tr><th>Item</th><th>Qty</th><th>Purpose</th><th>Release Date</th><th>Status</th><th>Reason (if rejected)</th></tr></thead><tbody>
             ${req.items.map(i => `
                 <tr>
                     <td>${i.consumable?.item_name ?? '—'}</td>
                     <td>${i.quantity} ${i.consumable?.unit ?? ''}</td>
                     <td>${i.purpose ?? '—'}</td>
+                    <td style="font-size:11.5px;">${i.release_date ? new Date(i.release_date.substring(0,10)+'T00:00:00').toLocaleDateString('en-PH',{year:'numeric',month:'short',day:'numeric'}) : '—'}</td>
                     <td><span class="chip-badge ${statusColor(i.status)}" style="${statusStyle(i.status)}">${i.status}</span></td>
                     <td style="font-size:11.5px; color:#888;">${i.rejection_reason ?? '—'}</td>
                 </tr>

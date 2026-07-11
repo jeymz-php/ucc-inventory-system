@@ -257,6 +257,7 @@ async function pollNotifications() {
             if (data.deletion_count  > 0) parts.push(`${data.deletion_count} account deletion`);
             if (data.consumable_count > 0) parts.push(`${data.consumable_count} consumable request`);
             if (data.ticket_count    > 0) parts.push(`${data.ticket_count} new ticket(s)`);
+            if (data.stock_count     > 0) parts.push(`${data.stock_count} item(s) out of stock`);
             summary.textContent = parts.join(', ') || `${unreadCount} pending`;
         } else {
             badge.style.display = 'none';
@@ -309,6 +310,22 @@ async function pollNotifications() {
                     onclick="markNotifAsRead('ticket', ${r.id})"
                     style="display:block; text-align:center; padding:6px; border-radius:6px; background:#f4f0ff; color:#7c3aed; font-size:11.5px; font-weight:600; text-decoration:none;">
                         <i class="ti ti-message-circle"></i> Open Ticket
+                    </a>
+                </div>`;
+
+            } else if (r.type === 'stock') {
+                return `
+                <div style="padding:12px 16px; border-bottom:1px solid var(--border); ${rowStyle}">
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                        <span style="font-size:9px; font-weight:700; background:#f5f5f5; color:#666; padding:2px 7px; border-radius:10px; text-transform:uppercase;">Out of Stock</span>
+                        ${dot}
+                    </div>
+                    <div style="font-size:13px; font-weight:600; color:var(--text-primary);">${r.title}</div>
+                    <div style="font-size:11px; color:var(--text-muted); margin:2px 0 8px;">${r.subtitle} • ${r.created_at}</div>
+                    <a href="{{ route('consumables') }}?openRefill=${r.id}"
+                    onclick="markNotifAsRead('stock', ${r.id})"
+                    style="display:block; text-align:center; padding:6px; border-radius:6px; background:#f5f5f5; color:#444; font-size:11.5px; font-weight:600; text-decoration:none;">
+                        <i class="ti ti-plus"></i> Restock Item
                     </a>
                 </div>`;
 

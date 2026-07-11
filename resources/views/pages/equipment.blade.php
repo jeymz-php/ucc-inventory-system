@@ -915,443 +915,578 @@
 
 @push('scripts')
 <script>
-// ── PAR MODAL ──
-function openParModal() {
-    document.getElementById('par-modal').classList.add('open');
-}
-function closeParModal() {
-    document.getElementById('par-modal').classList.remove('open');
-}
+// Use IIFE to avoid variable conflicts
+(function() {
+    'use strict';
 
-function updateParPreview(value) {
-    const preview     = document.getElementById('par-preview');
-    const summary     = document.getElementById('par-summary');
-    const previewName = document.getElementById('par-preview-name');
-    const summaryName = document.getElementById('par-summary-name');
-
-    if (value) {
-        const displayName = value.toUpperCase();
-        previewName.textContent = displayName;
-        summaryName.textContent = displayName;
-        preview.style.display = 'block';
-        summary.style.display = 'block';
-    } else {
-        preview.style.display = 'none';
-        summary.style.display = 'none';
+    // ── DOM READY CHECK ──
+    function ready(fn) {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', fn);
+        } else {
+            fn();
+        }
     }
-}
-</script>
-<script>
-// ── ACCOUNTABLE PERSON TYPE TOGGLE ENGINE ──
-function toggleAccountableType(radioElement) {
-    const formGroupContainer = radioElement.closest('.modal-form-group');
-    const existingSection = formGroupContainer.querySelector('.existing-user-group');
-    const manualSection   = formGroupContainer.querySelector('.manual-user-group');
-    
-    const dropdownSelect  = formGroupContainer.querySelector('.accountable-select-field');
-    const manualInputs    = formGroupContainer.querySelectorAll('.accountable-manual-input');
 
-    if (radioElement.value === 'existing') {
-        existingSection.style.display = 'block';
-        manualSection.style.display   = 'none';
-        
-        if (dropdownSelect && dropdownSelect.closest('form').id !== 'transfer-form') {
-            dropdownSelect.required = true;
+    // ── PAR MODAL ──
+    window.openParModal = function() {
+        const modal = document.getElementById('par-modal');
+        if (modal) modal.classList.add('open');
+    };
+    
+    window.closeParModal = function() {
+        const modal = document.getElementById('par-modal');
+        if (modal) modal.classList.remove('open');
+    };
+
+    window.updateParPreview = function(value) {
+        const preview = document.getElementById('par-preview');
+        const summary = document.getElementById('par-summary');
+        const previewName = document.getElementById('par-preview-name');
+        const summaryName = document.getElementById('par-summary-name');
+
+        if (preview && summary && previewName && summaryName) {
+            if (value) {
+                const displayName = value.toUpperCase();
+                previewName.textContent = displayName;
+                summaryName.textContent = displayName;
+                preview.style.display = 'block';
+                summary.style.display = 'block';
+            } else {
+                preview.style.display = 'none';
+                summary.style.display = 'none';
+            }
         }
-        manualInputs.forEach(input => {
-            input.required = false;
+    };
+
+    // ── ACCOUNTABLE PERSON TYPE TOGGLE ENGINE ──
+    window.toggleAccountableType = function(radioElement) {
+        const formGroupContainer = radioElement.closest('.modal-form-group');
+        if (!formGroupContainer) return;
+        
+        const existingSection = formGroupContainer.querySelector('.existing-user-group');
+        const manualSection = formGroupContainer.querySelector('.manual-user-group');
+        const dropdownSelect = formGroupContainer.querySelector('.accountable-select-field');
+        const manualInputs = formGroupContainer.querySelectorAll('.accountable-manual-input');
+
+        if (radioElement.value === 'existing') {
+            if (existingSection) existingSection.style.display = 'block';
+            if (manualSection) manualSection.style.display = 'none';
+            
+            if (dropdownSelect && dropdownSelect.closest('form')?.id !== 'transfer-form') {
+                dropdownSelect.required = true;
+            }
+            manualInputs.forEach(input => {
+                input.required = false;
+                input.value = '';
+            });
+        } else {
+            if (existingSection) existingSection.style.display = 'none';
+            if (manualSection) manualSection.style.display = 'block';
+            
+            if (dropdownSelect) {
+                dropdownSelect.required = false;
+                dropdownSelect.value = '';
+            }
+            manualInputs.forEach(input => {
+                if (input.closest('form')?.id !== 'transfer-form' && !input.name.includes('acc_mi')) {
+                    input.required = true;
+                }
+            });
+        }
+    };
+
+    // ── CHECKBOX SELECTION ──
+    function updateTransferButton() {
+        const checked = document.querySelectorAll('.equip-row-checkbox:checked');
+        const btn = document.getElementById('transfer-btn');
+        if (btn) {
+            if (checked.length > 0) {
+                btn.style.opacity = '1';
+                btn.style.pointerEvents = 'auto';
+            } else {
+                btn.style.opacity = '0.5';
+                btn.style.pointerEvents = 'none';
+            }
+        }
+    }
+
+    // ── TRANSFER MODAL ──
+    window.openTransferModal = function() {
+        const checked = document.querySelectorAll('.equip-row-checkbox:checked');
+        if (checked.length === 0) return;
+
+        const items = Array.from(checked).map(cb => cb.value);
+        const itemsInput = document.getElementById('transfer-items-input');
+        const countEl = document.getElementById('transfer-count');
+        const list = document.getElementById('transfer-items-list');
+        
+        if (itemsInput) itemsInput.value = JSON.stringify(items);
+        if (countEl) countEl.textContent = checked.length;
+
+        if (list) {
+            list.innerHTML = Array.from(checked).map(cb => `
+                <div class="transfer-item-row">
+                    <span class="transfer-item-name">${cb.dataset.name || '—'}</span>
+                    <span class="transfer-item-meta">${cb.dataset.campus || '—'} • ${cb.dataset.accountable || '—'}</span>
+                </div>
+            `).join('');
+        }
+
+        const modal = document.getElementById('transfer-modal');
+        if (modal) modal.classList.add('open');
+    };
+    
+    window.closeTransferModal = function() {
+        const modal = document.getElementById('transfer-modal');
+        if (modal) modal.classList.remove('open');
+    };
+
+    // ── REPORT MODAL ──
+    window.openReportModal = function() {
+        const modal = document.getElementById('report-modal');
+        if (modal) modal.classList.add('open');
+    };
+    
+    window.closeReportModal = function() {
+        const modal = document.getElementById('report-modal');
+        if (modal) modal.classList.remove('open');
+    };
+    
+    window.selectReportType = function(btn) {
+        document.querySelectorAll('.report-type-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const type = btn.dataset.value;
+        const typeInput = document.getElementById('report-type-input');
+        const campusGroup = document.getElementById('report-campus-group');
+        const personGroup = document.getElementById('report-person-group');
+        
+        if (typeInput) typeInput.value = type;
+        if (campusGroup) campusGroup.style.display = type === 'campus' ? 'block' : 'none';
+        if (personGroup) personGroup.style.display = type === 'person' ? 'block' : 'none';
+    };
+
+    // ── CATEGORY MODALS ──
+    window.openCategoryModal = function() {
+        const modal = document.getElementById('category-modal');
+        if (modal) modal.classList.add('open');
+    };
+
+    window.selectCategory = function(type) {
+        currentCategory = type;
+        const catModal = document.getElementById('category-modal');
+        if (catModal) catModal.classList.remove('open');
+
+        const meta = categoryMeta[type];
+        const previewBox = document.getElementById('method-preview-box');
+        if (previewBox) {
+            previewBox.innerHTML = `
+                <div class="method-preview-icon" style="background:${meta.color}"><i class="ti ${meta.icon}"></i></div>
+                <div class="method-preview-name">${type} Equipment</div>
+            `;
+        }
+        const methodModal = document.getElementById('method-modal');
+        if (methodModal) methodModal.classList.add('open');
+    };
+
+    window.backToCategoryModal = function(e) {
+        e.preventDefault();
+        const methodModal = document.getElementById('method-modal');
+        const catModal = document.getElementById('category-modal');
+        if (methodModal) methodModal.classList.remove('open');
+        if (catModal) catModal.classList.add('open');
+    };
+
+    window.openManualForm = function() {
+        const methodModal = document.getElementById('method-modal');
+        if (methodModal) methodModal.classList.remove('open');
+        
+        const modalId = 'form-' + currentCategory.toLowerCase() + '-modal';
+        const formModal = document.getElementById(modalId);
+        if (formModal) {
+            formModal.classList.add('open');
+            loadArticlesIntoForm(currentCategory, modalId);
+        }
+    };
+
+    window.closeAllEquipModals = function() {
+        document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('open'));
+    };
+
+    // ── ARTICLE MANAGER ──
+    let currentCategory = '';
+    let currentManagerType = '';
+
+    const categoryMeta = {
+        Computer: { color: '#1a6b3a', icon: 'ti-device-desktop' },
+        Kitchen:  { color: '#ef9f27', icon: 'ti-tools-kitchen-2' },
+        Office:   { color: '#3b82f6', icon: 'ti-briefcase' },
+        Lab:      { color: '#e24b4a', icon: 'ti-flask' },
+        General:  { color: '#7c3aed', icon: 'ti-package' },
+    };
+
+    async function loadArticlesIntoForm(type, modalId) {
+        try {
+            const res = await fetch(`{{ route('equipment.articles.index') }}?type=${type}`);
+            const data = await res.json();
+
+            let select;
+            if (type === 'Computer') {
+                select = document.getElementById('computer-article');
+            } else {
+                select = document.querySelector(`#${modalId} .article-select-${type}`);
+            }
+            if (!select) return;
+
+            select.innerHTML = '<option value="">-- Select Article --</option>';
+            data.forEach(a => {
+                select.innerHTML += `<option value="${a.name}">${a.name}</option>`;
+            });
+        } catch(e) {
+            console.error('Error loading articles:', e);
+        }
+    }
+
+    window.toggleComputerPackage = function(select) {
+        const isPackage = select.value === 'Computer Package';
+        const singleGroup = document.getElementById('single-serial-group');
+        const dualGroup = document.getElementById('dual-serial-group');
+        if (singleGroup) singleGroup.style.display = isPackage ? 'none' : 'block';
+        if (dualGroup) dualGroup.style.display = isPackage ? 'grid' : 'none';
+    };
+
+    window.toggleDateInput = function(radio) {
+        const wrap = radio.closest('.modal-form-group');
+        if (!wrap) return;
+        const input = wrap.querySelector('.purchase-date-input');
+        if (input) {
+            input.style.display = radio.value === '1' ? 'block' : 'none';
+            input.disabled = radio.value === '0';
+        }
+    };
+
+    // ── ARTICLE MANAGER FUNCTIONS ──
+    window.openArticleManager = function(type) {
+        currentManagerType = type;
+        const typeEl = document.getElementById('article-manager-type');
+        const modal = document.getElementById('article-manager-modal');
+        if (typeEl) typeEl.textContent = type;
+        if (modal) modal.classList.add('open');
+        refreshArticleList();
+    };
+
+    window.closeArticleManager = function() {
+        const modal = document.getElementById('article-manager-modal');
+        if (modal) modal.classList.remove('open');
+        const openForm = document.querySelector('.modal-overlay.open[id^="form-"]');
+        if (openForm) loadArticlesIntoForm(currentManagerType, openForm.id);
+    };
+
+    async function refreshArticleList() {
+        try {
+            const res = await fetch(`{{ route('equipment.articles.index') }}?type=${currentManagerType}`);
+            const data = await res.json();
+            const list = document.getElementById('article-list');
+
+            if (list) {
+                list.innerHTML = data.map(a => `
+                    <div class="article-row" data-id="${a.id}">
+                        <input type="text" value="${a.name}" onblur="window.updateArticle(${a.id}, this.value)">
+                        <div class="article-row-actions">
+                            <button onclick="window.deleteArticle(${a.id})" style="background:#fff5f5; color:var(--red);"><i class="ti ti-trash"></i></button>
+                        </div>
+                    </div>
+                `).join('') || '<p style="font-size:12px; color:#999; text-align:center; padding:1rem;">No articles yet.</p>';
+            }
+        } catch(e) {
+            console.error('Error refreshing articles:', e);
+        }
+    }
+
+    window.addArticle = async function() {
+        const input = document.getElementById('new-article-input');
+        if (!input || !input.value.trim()) return;
+
+        try {
+            await fetch('{{ route("equipment.articles.store") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                body: JSON.stringify({ equipment_type: currentManagerType, name: input.value.trim() })
+            });
+
             input.value = '';
-        });
-    } else {
-        existingSection.style.display = 'none';
-        manualSection.style.display   = 'block';
-        
-        if (dropdownSelect) {
-            dropdownSelect.required = false;
-            dropdownSelect.value = '';
+            refreshArticleList();
+        } catch(e) {
+            console.error('Error adding article:', e);
         }
-        manualInputs.forEach(input => {
-            if (input.closest('form').id !== 'transfer-form' && !input.name.includes('acc_mi')) {
-                input.required = true;
+    };
+
+    window.updateArticle = async function(id, name) {
+        if (!name.trim()) return;
+        try {
+            await fetch(`/equipment-articles/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                body: JSON.stringify({ name: name.trim() })
+            });
+        } catch(e) {
+            console.error('Error updating article:', e);
+        }
+    };
+
+    window.deleteArticle = async function(id) {
+        if (!confirm('Remove this article?')) return;
+        try {
+            await fetch(`/equipment-articles/${id}`, {
+                method: 'DELETE',
+                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+            });
+            refreshArticleList();
+        } catch(e) {
+            console.error('Error deleting article:', e);
+        }
+    };
+
+    // ── CONDEMN MODAL ──
+    window.openRowCondemnModal = function(type, id, name) {
+        const nameEl = document.getElementById('row-condemn-name');
+        const form = document.getElementById('row-condemn-form');
+        const modal = document.getElementById('row-condemn-modal');
+        
+        if (nameEl) nameEl.textContent = name;
+        if (form) form.action = `/equipment/${type}/${id}/condemn`;
+        if (modal) modal.classList.add('open');
+    };
+    
+    window.closeRowCondemnModal = function() {
+        const modal = document.getElementById('row-condemn-modal');
+        if (modal) modal.classList.remove('open');
+    };
+
+    // ── DELETE MODAL ──
+    let pendingDeleteType = null;
+    let pendingDeleteId = null;
+    let pendingDeleteName = null;
+
+    window.openRowDeleteModal = function(type, id, name) {
+        pendingDeleteType = type;
+        pendingDeleteId = id;
+        pendingDeleteName = name;
+        
+        const nameEl = document.getElementById('row-delete-confirm-name');
+        const modal = document.getElementById('row-delete-confirm-modal');
+        
+        if (nameEl) nameEl.textContent = name;
+        if (modal) modal.classList.add('open');
+    };
+    
+    window.closeRowDeleteConfirmModal = function() {
+        const modal = document.getElementById('row-delete-confirm-modal');
+        if (modal) modal.classList.remove('open');
+    };
+
+    window.proceedToFinalDelete = function() {
+        closeRowDeleteConfirmModal();
+        
+        const expectedEl = document.getElementById('row-delete-expected');
+        const form = document.getElementById('row-delete-form');
+        const modal = document.getElementById('row-delete-modal');
+        
+        if (expectedEl) expectedEl.textContent = 'Delete ' + pendingDeleteName;
+        if (form) form.action = `/equipment/${pendingDeleteType}/${pendingDeleteId}`;
+        if (modal) modal.classList.add('open');
+    };
+    
+    window.closeRowDeleteModal = function() {
+        const modal = document.getElementById('row-delete-modal');
+        if (modal) modal.classList.remove('open');
+    };
+
+    // ── UNDO TOAST ──
+    let undoTimer = null;
+    let undoSecondsLeft = 10;
+    let undoType = null;
+    let undoId = null;
+
+    window.showUndoToast = function(type, id, name) {
+        undoType = type;
+        undoId = id;
+        undoSecondsLeft = 10;
+
+        const textEl = document.getElementById('undo-toast-text');
+        const countEl = document.getElementById('undo-countdown');
+        const toast = document.getElementById('undo-toast');
+        
+        if (textEl) textEl.textContent = `"${name}" was deleted.`;
+        if (countEl) countEl.textContent = undoSecondsLeft;
+        if (toast) toast.style.display = 'flex';
+
+        clearInterval(undoTimer);
+        undoTimer = setInterval(() => {
+            undoSecondsLeft--;
+            const countEl2 = document.getElementById('undo-countdown');
+            if (countEl2) countEl2.textContent = undoSecondsLeft;
+            if (undoSecondsLeft <= 0) {
+                clearInterval(undoTimer);
+                const toast2 = document.getElementById('undo-toast');
+                if (toast2) toast2.style.display = 'none';
+            }
+        }, 1000);
+    };
+
+    window.executeUndo = async function() {
+        clearInterval(undoTimer);
+        const toast = document.getElementById('undo-toast');
+        if (toast) toast.style.display = 'none';
+
+        try {
+            const res = await fetch(`/equipment/${undoType}/${undoId}/undo-delete`, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+            });
+
+            if (res.ok) {
+                window.location.reload();
+            } else {
+                const data = await res.json();
+                alert(data.message || 'Could not undo — the item may have already been permanently removed.');
+            }
+        } catch(e) {
+            console.error('Error undoing delete:', e);
+        }
+    };
+
+    // ── INITIALIZATION ──
+    ready(function() {
+        // 1. Setup filter pills
+        document.querySelectorAll('.filter-pill').forEach(pill => {
+            pill.addEventListener('click', function() {
+                const name = this.dataset.name;
+                const value = this.dataset.value;
+                const hiddenId = 'hidden-' + (name === 'campus_id' ? 'campus' : name);
+                const hiddenInput = document.getElementById(hiddenId);
+                const form = document.getElementById('equip-filter-form');
+                
+                if (hiddenInput) hiddenInput.value = value;
+                if (form) form.submit();
+            });
+        });
+
+        // 2. Setup search with debounce
+        const searchInput = document.getElementById('equip-search');
+        let equipSearchTimeout = null;
+        
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                clearTimeout(equipSearchTimeout);
+                const val = this.value;
+                equipSearchTimeout = setTimeout(() => {
+                    const hiddenSearch = document.getElementById('hidden-search');
+                    const form = document.getElementById('equip-filter-form');
+                    if (hiddenSearch) hiddenSearch.value = val;
+                    if (form) form.submit();
+                }, 500);
+            });
+        }
+
+        // 3. Setup select all checkbox
+        const selectAll = document.getElementById('select-all-equip');
+        if (selectAll) {
+            selectAll.addEventListener('change', function() {
+                document.querySelectorAll('.equip-row-checkbox').forEach(cb => cb.checked = this.checked);
+                updateTransferButton();
+            });
+        }
+
+        // 4. Setup individual checkboxes
+        document.querySelectorAll('.equip-row-checkbox').forEach(cb => {
+            cb.addEventListener('change', updateTransferButton);
+        });
+
+        // 5. Setup campus -> location AJAX
+        document.addEventListener('change', async function(e) {
+            if (e.target.classList.contains('campus-select')) {
+                const campusId = e.target.value;
+                const formGroup = e.target.closest('form');
+                if (!formGroup) return;
+                const locSelect = formGroup.querySelector('.location-select');
+                if (!locSelect) return;
+
+                locSelect.innerHTML = '<option value="">Loading...</option>';
+                if (!campusId) {
+                    locSelect.innerHTML = '<option value="">-- Unassigned / Storage --</option>';
+                    return;
+                }
+
+                try {
+                    const res = await fetch(`{{ route('equipment.locations-by-campus') }}?campus_id=${campusId}`);
+                    const data = await res.json();
+
+                    locSelect.innerHTML = '<option value="">-- Unassigned / Storage --</option>';
+                    data.forEach(loc => {
+                        locSelect.innerHTML += `<option value="${loc.id}">${loc.location_name}</option>`;
+                    });
+                } catch(e) {
+                    console.error('Error loading locations:', e);
+                    locSelect.innerHTML = '<option value="">-- Error loading --</option>';
+                }
             }
         });
-    }
-}
 
-// ── CHECKBOX SELECTION ──
-function updateTransferButton() {
-    const checked = document.querySelectorAll('.equip-row-checkbox:checked');
-    const btn = document.getElementById('transfer-btn');
-    if (checked.length > 0) {
-        btn.style.opacity = '1';
-        btn.style.pointerEvents = 'auto';
-    } else {
-        btn.style.opacity = '0.5';
-        btn.style.pointerEvents = 'none';
-    }
-}
+        // 6. Setup transfer campus change
+        const transferCampus = document.querySelector('.transfer-campus-select');
+        if (transferCampus) {
+            transferCampus.addEventListener('change', async function() {
+                const campusId = this.value;
+                const locSelect = document.querySelector('.transfer-location-select');
+                if (!locSelect) return;
 
-document.getElementById('select-all-equip')?.addEventListener('change', function() {
-    document.querySelectorAll('.equip-row-checkbox').forEach(cb => cb.checked = this.checked);
-    updateTransferButton();
-});
+                locSelect.innerHTML = '<option value="">Loading...</option>';
+                if (!campusId) {
+                    locSelect.innerHTML = '<option value="">-- Unassigned / Storage --</option>';
+                    return;
+                }
 
-document.querySelectorAll('.equip-row-checkbox').forEach(cb => {
-    cb.addEventListener('change', updateTransferButton);
-});
+                try {
+                    const res = await fetch(`{{ route('equipment.locations-by-campus') }}?campus_id=${campusId}`);
+                    const data = await res.json();
 
-// ── TRANSFER MODAL ──
-function openTransferModal() {
-    const checked = document.querySelectorAll('.equip-row-checkbox:checked');
-    if (checked.length === 0) return;
-
-    const items = Array.from(checked).map(cb => cb.value);
-    document.getElementById('transfer-items-input').value = JSON.stringify(items);
-    document.getElementById('transfer-count').textContent = checked.length;
-
-    const list = document.getElementById('transfer-items-list');
-    list.innerHTML = Array.from(checked).map(cb => `
-        <div class="transfer-item-row">
-            <span class="transfer-item-name">${cb.dataset.name}</span>
-            <span class="transfer-item-meta">${cb.dataset.campus} • ${cb.dataset.accountable}</span>
-        </div>
-    `).join('');
-
-    document.getElementById('transfer-modal').classList.add('open');
-}
-function closeTransferModal() {
-    document.getElementById('transfer-modal').classList.remove('open');
-}
-
-document.querySelector('.transfer-campus-select').addEventListener('change', async function() {
-    const campusId = this.value;
-    const locSelect = document.querySelector('.transfer-location-select');
-    locSelect.innerHTML = '<option value="">Loading...</option>';
-    if (!campusId) { locSelect.innerHTML = '<option value="">-- Unassigned / Storage --</option>'; return; }
-
-    const res  = await fetch(`{{ route('equipment.locations-by-campus') }}?campus_id=${campusId}`);
-    const data = await res.json();
-
-    locSelect.innerHTML = '<option value="">-- Unassigned / Storage --</option>';
-    data.forEach(loc => {
-        locSelect.innerHTML += `<option value="${loc.id}">${loc.location_name}</option>`;
-    });
-});
-
-// ── REPORT MODAL ──
-function openReportModal() {
-    document.getElementById('report-modal').classList.add('open');
-}
-function closeReportModal() {
-    document.getElementById('report-modal').classList.remove('open');
-}
-function selectReportType(btn) {
-    document.querySelectorAll('.report-type-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const type = btn.dataset.value;
-    document.getElementById('report-type-input').value = type;
-    document.getElementById('report-campus-group').style.display = type === 'campus' ? 'block' : 'none';
-    document.getElementById('report-person-group').style.display = type === 'person' ? 'block' : 'none';
-}
-</script>
-
-<script>
-// Filter pill clicks
-document.querySelectorAll('.filter-pill').forEach(pill => {
-    pill.addEventListener('click', function() {
-        const name  = this.dataset.name;
-        const value = this.dataset.value;
-        document.getElementById('hidden-' + (name === 'campus_id' ? 'campus' : name)).value = value;
-        document.getElementById('equip-filter-form').submit();
-    });
-});
-
-// Search with debounce
-let equipSearchTimeout;
-document.getElementById('equip-search').addEventListener('input', function() {
-    clearTimeout(equipSearchTimeout);
-    const val = this.value;
-    equipSearchTimeout = setTimeout(() => {
-        document.getElementById('hidden-search').value = val;
-        document.getElementById('equip-filter-form').submit();
-    }, 500);
-});
-</script>
-
-<script>
-let currentCategory = '';
-let currentManagerType = '';
-
-const categoryMeta = {
-    Computer: { color: '#1a6b3a', icon: 'ti-device-desktop' },
-    Kitchen:  { color: '#ef9f27', icon: 'ti-tools-kitchen-2' },
-    Office:   { color: '#3b82f6', icon: 'ti-briefcase' },
-    Lab:      { color: '#e24b4a', icon: 'ti-flask' },
-    General:  { color: '#7c3aed', icon: 'ti-package' },
-};
-
-// Open category picker when "Add Equipment" clicked
-document.querySelector('.btn-add[href="#"]:last-of-type')?.addEventListener('click', function(e) {
-    e.preventDefault();
-    openCategoryModal();
-});
-
-function openCategoryModal() {
-    document.getElementById('category-modal').classList.add('open');
-}
-
-function selectCategory(type) {
-    currentCategory = type;
-    document.getElementById('category-modal').classList.remove('open');
-
-    const meta = categoryMeta[type];
-    document.getElementById('method-preview-box').innerHTML = `
-        <div class="method-preview-icon" style="background:${meta.color}"><i class="ti ${meta.icon}"></i></div>
-        <div class="method-preview-name">${type} Equipment</div>
-    `;
-    document.getElementById('method-modal').classList.add('open');
-}
-
-function backToCategoryModal(e) {
-    e.preventDefault();
-    document.getElementById('method-modal').classList.remove('open');
-    document.getElementById('category-modal').classList.add('open');
-}
-
-function openManualForm() {
-    document.getElementById('method-modal').classList.remove('open');
-    const modalId = 'form-' + currentCategory.toLowerCase() + '-modal';
-    document.getElementById(modalId).classList.add('open');
-    loadArticlesIntoForm(currentCategory, modalId);
-}
-
-function closeAllEquipModals() {
-    document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('open'));
-}
-
-// Load articles into the relevant select for the open form
-async function loadArticlesIntoForm(type, modalId) {
-    const res  = await fetch(`{{ route('equipment.articles.index') }}?type=${type}`);
-    const data = await res.json();
-
-    let select;
-    if (type === 'Computer') {
-        select = document.getElementById('computer-article');
-    } else {
-        select = document.querySelector(`#${modalId} .article-select-${type}`);
-    }
-    if (!select) return;
-
-    select.innerHTML = '<option value="">-- Select Article --</option>';
-    data.forEach(a => {
-        select.innerHTML += `<option value="${a.name}">${a.name}</option>`;
-    });
-}
-
-// Computer Package toggle
-function toggleComputerPackage(select) {
-    const isPackage = select.value === 'Computer Package';
-    document.getElementById('single-serial-group').style.display = isPackage ? 'none' : 'block';
-    document.getElementById('dual-serial-group').style.display   = isPackage ? 'grid' : 'none';
-}
-
-// Date toggle (have date / no date)
-function toggleDateInput(radio) {
-    const wrap  = radio.closest('.modal-form-group');
-    const input = wrap.querySelector('.purchase-date-input');
-    input.style.display = radio.value === '1' ? 'block' : 'none';
-    input.disabled = radio.value === '0';
-}
-
-// Campus -> Location AJAX
-document.addEventListener('change', async function(e) {
-    if (e.target.classList.contains('campus-select')) {
-        const campusId = e.target.value;
-        const formGroup = e.target.closest('form');
-        const locSelect = formGroup.querySelector('.location-select');
-
-        locSelect.innerHTML = '<option value="">Loading...</option>';
-        if (!campusId) {
-            locSelect.innerHTML = '<option value="">-- Unassigned / Storage --</option>';
-            return;
+                    locSelect.innerHTML = '<option value="">-- Unassigned / Storage --</option>';
+                    data.forEach(loc => {
+                        locSelect.innerHTML += `<option value="${loc.id}">${loc.location_name}</option>`;
+                    });
+                } catch(e) {
+                    console.error('Error loading locations:', e);
+                    locSelect.innerHTML = '<option value="">-- Error loading --</option>';
+                }
+            });
         }
 
-        const res  = await fetch(`{{ route('equipment.locations-by-campus') }}?campus_id=${campusId}`);
-        const data = await res.json();
-
-        locSelect.innerHTML = '<option value="">-- Unassigned / Storage --</option>';
-        data.forEach(loc => {
-            locSelect.innerHTML += `<option value="${loc.id}">${loc.location_name}</option>`;
+        // 7. Setup modal close on overlay click
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', function(e) {
+                if (e.target === this) this.classList.remove('open');
+            });
         });
-    }
-});
 
-// ── ARTICLE MANAGER ──
-function openArticleManager(type) {
-    currentManagerType = type;
-    document.getElementById('article-manager-type').textContent = type;
-    document.getElementById('article-manager-modal').classList.add('open');
-    refreshArticleList();
-}
-
-function closeArticleManager() {
-    document.getElementById('article-manager-modal').classList.remove('open');
-    const openForm = document.querySelector('.modal-overlay.open[id^="form-"]');
-    if (openForm) loadArticlesIntoForm(currentManagerType, openForm.id);
-}
-
-async function refreshArticleList() {
-    const res  = await fetch(`{{ route('equipment.articles.index') }}?type=${currentManagerType}`);
-    const data = await res.json();
-    const list = document.getElementById('article-list');
-
-    list.innerHTML = data.map(a => `
-        <div class="article-row" data-id="${a.id}">
-            <input type="text" value="${a.name}" onblur="updateArticle(${a.id}, this.value)">
-            <div class="article-row-actions">
-                <button onclick="deleteArticle(${a.id})" style="background:#fff5f5; color:var(--red);"><i class="ti ti-trash"></i></button>
-            </div>
-        </div>
-    `).join('') || '<p style="font-size:12px; color:#999; text-align:center; padding:1rem;">No articles yet.</p>';
-}
-
-async function addArticle() {
-    const input = document.getElementById('new-article-input');
-    if (!input.value.trim()) return;
-
-    await fetch('{{ route("equipment.articles.store") }}', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-        body: JSON.stringify({ equipment_type: currentManagerType, name: input.value.trim() })
-    });
-
-    input.value = '';
-    refreshArticleList();
-}
-
-async function updateArticle(id, name) {
-    if (!name.trim()) return;
-    await fetch(`/equipment-articles/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-        body: JSON.stringify({ name: name.trim() })
-    });
-}
-
-async function deleteArticle(id) {
-    if (!confirm('Remove this article?')) return;
-    await fetch(`/equipment-articles/${id}`, {
-        method: 'DELETE',
-        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
-    });
-    refreshArticleList();
-}
-
-// Close modals on overlay click (except nested article manager closing properly)
-document.querySelectorAll('.modal-overlay').forEach(overlay => {
-    overlay.addEventListener('click', function(e) {
-        if (e.target === this) this.classList.remove('open');
-    });
-});
-</script>
-
-<script>
-function openRowCondemnModal(type, id, name) {
-    document.getElementById('row-condemn-name').textContent = name;
-    document.getElementById('row-condemn-form').action = `/equipment/${type}/${id}/condemn`;
-    document.getElementById('row-condemn-modal').classList.add('open');
-}
-function closeRowCondemnModal() {
-    document.getElementById('row-condemn-modal').classList.remove('open');
-}
-
-document.querySelectorAll('.modal-overlay').forEach(o => {
-    o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
-});
-</script>
-<script>
-let pendingDeleteType = null;
-let pendingDeleteId = null;
-let pendingDeleteName = null;
-
-function openRowDeleteModal(type, id, name) {
-    pendingDeleteType = type;
-    pendingDeleteId = id;
-    pendingDeleteName = name;
-    document.getElementById('row-delete-confirm-name').textContent = name;
-    document.getElementById('row-delete-confirm-modal').classList.add('open');
-}
-function closeRowDeleteConfirmModal() {
-    document.getElementById('row-delete-confirm-modal').classList.remove('open');
-}
-
-function proceedToFinalDelete() {
-    closeRowDeleteConfirmModal();
-    document.getElementById('row-delete-expected').textContent = 'Delete ' + pendingDeleteName;
-    document.getElementById('row-delete-form').action = `/equipment/${pendingDeleteType}/${pendingDeleteId}`;
-    document.getElementById('row-delete-modal').classList.add('open');
-}
-function closeRowDeleteModal() {
-    document.getElementById('row-delete-modal').classList.remove('open');
-}
-
-document.querySelectorAll('.modal-overlay').forEach(o => {
-    o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
-});
-
-// ── UNDO TOAST ──
-let undoTimer = null;
-let undoSecondsLeft = 10;
-let undoType = null;
-let undoId = null;
-
-function showUndoToast(type, id, name) {
-    undoType = type;
-    undoId = id;
-    undoSecondsLeft = 10;
-
-    document.getElementById('undo-toast-text').textContent = `"${name}" was deleted.`;
-    document.getElementById('undo-countdown').textContent = undoSecondsLeft;
-    document.getElementById('undo-toast').style.display = 'flex';
-
-    clearInterval(undoTimer);
-    undoTimer = setInterval(() => {
-        undoSecondsLeft--;
-        document.getElementById('undo-countdown').textContent = undoSecondsLeft;
-        if (undoSecondsLeft <= 0) {
-            clearInterval(undoTimer);
-            document.getElementById('undo-toast').style.display = 'none';
+        // 8. Setup "Add Equipment" button
+        const addBtn = document.querySelector('.btn-add[href="#"]:last-of-type');
+        if (addBtn) {
+            addBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                openCategoryModal();
+            });
         }
-    }, 1000);
-}
 
-async function executeUndo() {
-    clearInterval(undoTimer);
-    document.getElementById('undo-toast').style.display = 'none';
+        // 9. Check for undo toast from session
+        @if(session('undo_delete'))
+        window.showUndoToast('{{ session('undo_type') }}', {{ session('undo_id') }}, '{{ addslashes(session('undo_name')) }}');
+        @endif
 
-    const res = await fetch(`/equipment/${undoType}/${undoId}/undo-delete`, {
-        method: 'POST',
-        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+        // 10. Initialize transfer button state
+        updateTransferButton();
     });
 
-    if (res.ok) {
-        window.location.reload();
-    } else {
-        const data = await res.json();
-        alert(data.message || 'Could not undo — the item may have already been permanently removed.');
-    }
-}
-
-window.addEventListener('pageshow', function(event) {
-    // event.persisted is true when the page is restored from bfcache (back/forward navigation)
-    if (event.persisted) {
-        document.getElementById('undo-toast').style.display = 'none';
-        return;
-    }
-
-    @if(session('undo_delete'))
-    showUndoToast('{{ session('undo_type') }}', {{ session('undo_id') }}, '{{ addslashes(session('undo_name')) }}');
-    @endif
-});
+})(); // End of IIFE
 </script>
 @endpush

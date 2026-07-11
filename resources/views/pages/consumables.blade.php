@@ -146,6 +146,7 @@
                         <div class="table-actions">
                             @if(in_array($role, ['admin','superadmin']))
                             <button class="table-icon-btn" style="background:#f0faf4; color:var(--green-dark);" title="Refill"
+                                    data-item-id="{{ $item->id }}" data-refill-btn
                                     onclick="openRefillModal({{ $item->id }}, '{{ addslashes($item->item_name) }}', '{{ $item->unit }}', {{ $item->current_stock }})">
                                 <i class="ti ti-plus"></i>
                             </button>
@@ -658,6 +659,19 @@ function openRequestModal() {
 
 document.querySelectorAll('.modal-overlay').forEach(o => {
     o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+
+// ── AUTO-OPEN REFILL (from the "Restock Item" notification link) ──
+document.addEventListener('DOMContentLoaded', function() {
+    const params = new URLSearchParams(window.location.search);
+    const refillId = params.get('openRefill');
+    if (!refillId) return;
+
+    const btn = document.querySelector(`[data-refill-btn][data-item-id="${refillId}"]`);
+    if (btn) {
+        btn.click();
+        btn.closest('tr')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
 });
 </script>
 @endpush

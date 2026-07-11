@@ -8,9 +8,15 @@
     <i class="ti ti-arrow-left"></i> Back to Consumables
 </a>
 
-<div style="display:flex; gap:10px; margin-bottom:1.25rem;">
+<div style="display:flex; gap:10px; margin-bottom:1.25rem; align-items:center; flex-wrap:wrap;">
     <a href="{{ route('consumable-requests') }}" class="tab-toggle-btn active"><i class="ti ti-history"></i> Request History</a>
     <a href="{{ route('consumables.reports') }}" class="tab-toggle-btn"><i class="ti ti-chart-line"></i> Consumption Reports</a>
+    @if(in_array(auth()->user()->role, ['admin','superadmin']))
+    <button type="button" class="tab-toggle-btn" style="margin-left:auto; border:1.5px dashed #7c3aed; color:#7c3aed; background:#f4f0ff;"
+            onclick="openBlankReceiptModal()">
+        <i class="ti ti-file-text"></i> Generate Blank Receipt
+    </button>
+    @endif
 </div>
 
 <div class="card" style="margin-bottom:1.25rem;">
@@ -36,10 +42,11 @@
                     <th>Reference</th>
                     <th>Recipient</th>
                     <th>Source</th>
-                    <th>Date</th>
+                    <th>Request Date</th>
                     <th>Items</th>
                     <th>Signatories</th>
                     <th>Status</th>
+                    <th>Approved Date</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -81,6 +88,15 @@
                             <span class="chip-badge chip-status-inactive">Rejected</span>
                         @endif
                     </td>
+                    {{-- Approved Date = reviewed_at --}}
+                    <td style="font-size:11.5px; color:var(--text-muted); white-space:nowrap;">
+                        @if($req->reviewed_at)
+                            {{ $req->reviewed_at->format('M d, Y') }}<br>
+                            <span style="font-size:10.5px;">{{ $req->reviewed_at->format('h:i A') }}</span>
+                        @else
+                            <span style="color:#ccc;">—</span>
+                        @endif
+                    </td>
                     <td>
                         <div class="table-actions">
                             <button class="table-icon-btn view" title="View Details"
@@ -110,7 +126,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="8">
+                    <td colspan="9">
                         <div class="empty-state">
                             <i class="ti ti-clipboard-off"></i>
                             <p>No requests found.</p>
@@ -131,7 +147,7 @@
 
 {{-- VIEW DETAILS MODAL --}}
 <div class="modal-overlay" id="view-request-modal">
-    <div class="modal-box-lg" style="max-width:680px;">
+    <div class="modal-box-lg" style="max-width:700px;">
         <div class="modal-header-row">
             <div class="modal-title-sm"><i class="ti ti-eye"></i> Request Details</div>
             <button class="modal-close" onclick="document.getElementById('view-request-modal').classList.remove('open');"><i class="ti ti-x"></i></button>
@@ -162,7 +178,7 @@
 
 {{-- EDIT REQUEST MODAL --}}
 <div class="modal-overlay" id="edit-request-modal">
-    <div class="modal-box-lg" style="max-width:720px;">
+    <div class="modal-box-lg" style="max-width:800px;">
         <div class="modal-header-row" style="background:#3b82f6; margin:-1.5rem -1.5rem 1.25rem; padding:1.1rem 1.5rem; border-radius:14px 14px 0 0;">
             <div class="modal-title-sm" style="color:#fff;">
                 <i class="ti ti-edit"></i> Edit Request Group: <span id="er-ref-no"></span>
@@ -192,7 +208,6 @@
                 <i class="ti ti-list"></i> Requested Items
             </div>
 
-            {{-- Load Select2 for searchable item dropdown --}}
             <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
             <style>
             .select2-container .select2-selection--single { height:38px; border:1.5px solid #e0e0e0; border-radius:8px; }
@@ -203,13 +218,14 @@
             </style>
 
             <div style="overflow-x:auto; margin-bottom:0.5rem;">
-                <table class="data-table" style="min-width:560px;">
+                <table class="data-table" style="min-width:680px;">
                     <thead>
                         <tr>
                             <th>Item</th>
-                            <th style="width:90px;">Quantity</th>
+                            <th style="width:80px;">Qty</th>
                             <th>Purpose</th>
-                            <th style="width:110px;">Status</th>
+                            <th style="width:130px;">Release Date</th>
+                            <th style="width:105px;">Status</th>
                             <th style="width:40px;"></th>
                         </tr>
                     </thead>
@@ -260,6 +276,36 @@
     </div>
 </div>
 
+{{-- BLANK RECEIPT MODAL --}}
+@if(in_array(auth()->user()->role, ['admin','superadmin']))
+<div class="modal-overlay" id="blank-receipt-modal">
+    <div class="modal-box-sm">
+        <div class="modal-header-row" style="background:#7c3aed; margin:-1.5rem -1.5rem 1.25rem; padding:1.1rem 1.5rem; border-radius:14px 14px 0 0;">
+            <div class="modal-title-sm" style="color:#fff;"><i class="ti ti-file-text"></i> Generate Blank Receipt</div>
+            <button class="modal-close" style="background:rgba(255,255,255,0.15); color:#fff; border-color:transparent;"
+                    onclick="document.getElementById('blank-receipt-modal').classList.remove('open');"><i class="ti ti-x"></i></button>
+        </div>
+
+        <div class="modal-form-group" style="margin:0;">
+            <div class="modal-label">Number of item rows</div>
+            <div class="filter-pills" id="blank-rows-pills" style="margin-top:6px;">
+                <button type="button" class="filter-pill blank-rows-pill" data-value="5">5</button>
+                <button type="button" class="filter-pill blank-rows-pill active" data-value="10">10</button>
+                <button type="button" class="filter-pill blank-rows-pill" data-value="15">15</button>
+                <button type="button" class="filter-pill blank-rows-pill" data-value="20">20</button>
+                <button type="button" class="filter-pill blank-rows-pill" data-value="custom">Custom</button>
+            </div>
+            <input type="number" id="blank-rows-custom" class="modal-input" placeholder="Enter number of rows (1–100)"
+                   style="display:none; margin-top:10px;" min="1" max="100">
+        </div>
+
+        <button type="button" class="modal-btn-primary" style="margin-top:1.25rem; background:#7c3aed;" onclick="generateBlankReceipt()">
+            <i class="ti ti-file-text"></i> Generate Blank Receipt
+        </button>
+    </div>
+</div>
+@endif
+
 <style>
 @keyframes highlightFlash {
     0%   { background: #fff3cd; }
@@ -272,241 +318,404 @@
 @endsection
 
 @push('scripts')
+{{-- Load jQuery first, then Select2 --}}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 <script>
-// ── VIEW DETAILS ──
-async function viewRequestDetails(id) {
-    const res = await fetch(`/consumable-requests/${id}`);
-    const req = await res.json();
+// Use IIFE to avoid variable conflicts
+(function() {
+    'use strict';
 
-    const sourceBadge = (req.source === 'cs')
-        ? '<span class="chip-badge" style="background:#eff6ff;color:#1a56db;"><i class="ti ti-package" style="font-size:10px;"></i> CS</span>'
-        : '<span class="chip-badge" style="background:#f0faf4;color:#1a6b3a;"><i class="ti ti-device-desktop" style="font-size:10px;"></i> IMS</span>';
+    // ── VIEW DETAILS ──
+    window.viewRequestDetails = async function(id) {
+        try {
+            const res = await fetch(`/consumable-requests/${id}`);
+            const req = await res.json();
 
-    const mi       = req.recipient_mi ? req.recipient_mi.trim() : '';
-    const fullName = [req.recipient_first_name, mi, req.recipient_last_name].filter(Boolean).join(' ');
+            const sourceBadge = (req.source === 'cs')
+                ? '<span class="chip-badge" style="background:#eff6ff;color:#1a56db;"><i class="ti ti-package" style="font-size:10px;"></i> CS</span>'
+                : '<span class="chip-badge" style="background:#f0faf4;color:#1a6b3a;"><i class="ti ti-device-desktop" style="font-size:10px;"></i> IMS</span>';
 
-    document.getElementById('view-request-content').innerHTML = `
-        <div class="detail-section">
-            <div class="detail-section-title"><i class="ti ti-user"></i> Recipient Information</div>
-            <div class="detail-grid">
-                <div class="detail-row"><span>Employee Name</span><strong>${fullName}</strong></div>
-                <div class="detail-row"><span>Office/Department</span><strong>${req.department}</strong></div>
-                <div class="detail-row"><span>Campus</span><strong>${req.campus?.name ?? '—'}</strong></div>
-                <div class="detail-row"><span>Request Date</span><strong>${new Date(req.request_date).toLocaleDateString('en-PH',{year:'numeric',month:'long',day:'numeric'})}</strong></div>
-                <div class="detail-row"><span>Source</span><strong>${sourceBadge}</strong></div>
-                <div class="detail-row"><span>Requested By</span><strong>${req.requester?.name ?? '—'}</strong></div>
-            </div>
-        </div>
-        <br>
-        <div class="detail-section">
-            <div class="detail-section-title"><i class="ti ti-list"></i> Requested Items</div>
-            <div style="overflow-x:auto;">
-                <table class="data-table">
-                    <thead><tr><th>Item</th><th>Qty</th><th>Purpose</th><th>Status</th></tr></thead>
-                    <tbody>
-                    ${req.items.map(i => `
-                        <tr>
-                            <td>${i.consumable?.item_name ?? '—'}</td>
-                            <td>${i.quantity} ${i.consumable?.unit ?? ''}</td>
-                            <td style="font-size:12px;">${i.purpose ?? '—'}</td>
-                            <td>
-                                <span class="chip-badge ${i.status==='approved'?'chip-status-active':(i.status==='rejected'?'chip-status-inactive':'')}"
-                                      style="${i.status==='pending'?'background:#fff8f0;color:#ef9f27;':''}">
-                                    ${i.status}
-                                </span>
-                            </td>
-                        </tr>
-                    `).join('')}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        <br>
-        <div class="detail-section">
-            <div class="detail-section-title"><i class="ti ti-signature"></i> Signatories</div>
-            <div class="detail-grid">
-                <div class="detail-row"><span>Approved By</span><strong>${req.approved_by ?? '—'}</strong></div>
-                <div class="detail-row"><span>Supply Officer</span><strong>${req.supply_officer ?? '—'}</strong></div>
-            </div>
-        </div>
-    `;
-    document.getElementById('view-request-modal').classList.add('open');
-}
+            const mi           = req.recipient_mi ? req.recipient_mi.trim() : '';
+            const fullName     = [req.recipient_first_name, mi, req.recipient_last_name].filter(Boolean).join(' ');
+            const approvedDate = req.reviewed_at
+                ? new Date(req.reviewed_at).toLocaleString('en-PH', {year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})
+                : '—';
 
-// ── CHECK MODAL ──
-async function openCheckModal(id) {
-    const res = await fetch(`/consumable-requests/${id}`);
-    const req = await res.json();
+            document.getElementById('view-request-content').innerHTML = `
+                <div class="detail-section">
+                    <div class="detail-section-title"><i class="ti ti-user"></i> Recipient Information</div>
+                    <div class="detail-grid">
+                        <div class="detail-row"><span>Employee Name</span><strong>${fullName}</strong></div>
+                        <div class="detail-row"><span>Office/Department</span><strong>${req.department}</strong></div>
+                        <div class="detail-row"><span>Campus</span><strong>${req.campus?.name ?? '—'}</strong></div>
+                        <div class="detail-row"><span>Request Date</span><strong>${new Date(req.request_date).toLocaleDateString('en-PH',{year:'numeric',month:'long',day:'numeric'})}</strong></div>
+                        <div class="detail-row"><span>Source</span><strong>${sourceBadge}</strong></div>
+                        <div class="detail-row"><span>Requested By</span><strong>${req.requester?.name ?? '—'}</strong></div>
+                    </div>
+                </div>
+                <br>
+                <div class="detail-section">
+                    <div class="detail-section-title"><i class="ti ti-circle-check"></i> Status & Dates</div>
+                    <div class="detail-grid">
+                        <div class="detail-row"><span>Status</span><strong>
+                            <span class="chip-badge ${req.status==='approved'?'chip-status-active':(req.status==='rejected'?'chip-status-inactive':'')}"
+                                  style="${req.status==='pending'?'background:#fff8f0;color:#ef9f27;':req.status==='partial'?'background:#eff6ff;color:#2563eb;':''}">${req.status}</span>
+                        </strong></div>
+                        <div class="detail-row"><span>Approved Date</span><strong>${approvedDate}</strong></div>
+                        <div class="detail-row"><span>Approved By</span><strong>${req.approved_by ?? '—'}</strong></div>
+                        <div class="detail-row"><span>Supply Officer</span><strong>${req.supply_officer ?? '—'}</strong></div>
+                    </div>
+                </div>
+                <br>
+                <div class="detail-section">
+                    <div class="detail-section-title"><i class="ti ti-list"></i> Requested Items</div>
+                    <div style="overflow-x:auto;">
+                        <table class="data-table">
+                            <thead><tr><th>Item</th><th>Qty</th><th>Purpose</th><th>Release Date</th><th>Status</th></tr></thead>
+                            <tbody>
+                            ${req.items.map(i => `
+                                <tr>
+                                    <td>${i.consumable?.item_name ?? '—'}</td>
+                                    <td>${i.quantity} ${i.consumable?.unit ?? ''}</td>
+                                    <td style="font-size:12px;">${i.purpose ?? '—'}</td>
+                                    <td style="font-size:12px;">${i.release_date ? new Date(i.release_date.substring(0,10)+'T00:00:00').toLocaleDateString('en-PH',{year:'numeric',month:'short',day:'numeric'}) : '—'}</td>
+                                    <td><span class="chip-badge ${i.status==='approved'?'chip-status-active':(i.status==='rejected'?'chip-status-inactive':'')}"
+                                              style="${i.status==='pending'?'background:#fff8f0;color:#ef9f27;':''}">${i.status}</span></td>
+                                </tr>
+                            `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+            document.getElementById('view-request-modal').classList.add('open');
+        } catch(e) {
+            console.error('Error loading request details:', e);
+            alert('Could not load request details. Please try again.');
+        }
+    };
 
-    const mi       = req.recipient_mi ? req.recipient_mi.trim() : '';
-    const fullName = [req.recipient_first_name, mi, req.recipient_last_name].filter(Boolean).join(' ');
+    // ── CHECK MODAL ──
+    window.openCheckModal = async function(id) {
+        try {
+            const res = await fetch(`/consumable-requests/${id}`);
+            const req = await res.json();
 
-    document.getElementById('check-form').action = `/consumable-requests/${id}/review`;
-    document.getElementById('check-form-content').innerHTML = `
-        <div style="margin-bottom:1rem; padding:10px 14px; background:#fafafa; border-radius:8px;">
-            <div style="font-size:12px; color:var(--text-muted); margin-bottom:3px;">Recipient</div>
-            <div style="font-size:13px; font-weight:600;">${fullName}</div>
-            <div style="font-size:12px; color:var(--text-muted);">${req.department}</div>
-        </div>
-        <div style="overflow-x:auto;">
-            <table class="data-table">
-                <thead><tr><th>Item</th><th>Qty</th><th>Decision</th><th>Rejection Reason</th></tr></thead>
-                <tbody>
-                ${req.items.map((i, idx) => `
-                    <tr>
-                        <td>
-                            ${i.consumable?.item_name ?? '—'}
-                            <div class="cell-secondary">Available: ${i.consumable?.current_stock ?? 0} ${i.consumable?.unit ?? ''}</div>
-                        </td>
-                        <td>${i.quantity}</td>
-                        <td>
-                            <input type="hidden" name="items[${idx}][id]" value="${i.id}">
-                            <select name="items[${idx}][decision]" class="modal-input" style="padding:6px 10px; font-size:12px;">
-                                <option value="approved">Approve</option>
-                                <option value="rejected">Reject</option>
-                            </select>
-                        </td>
-                        <td>
-                            <input type="text" name="items[${idx}][rejection_reason]"
-                                   class="modal-input" style="padding:6px 10px; font-size:12px;"
-                                   placeholder="If rejected...">
-                        </td>
-                    </tr>
-                `).join('')}
-                </tbody>
-            </table>
-        </div>
-    `;
-    document.getElementById('check-modal').classList.add('open');
-}
+            const mi       = req.recipient_mi ? req.recipient_mi.trim() : '';
+            const fullName = [req.recipient_first_name, mi, req.recipient_last_name].filter(Boolean).join(' ');
 
-// ── EDIT REQUEST MODAL ──
-let availableConsumablesCache = null;
-let erItemIdx = 0;
-let erAllItems = [];
+            document.getElementById('check-form').action = `/consumable-requests/${id}/review`;
+            document.getElementById('check-form-content').innerHTML = `
+                <div style="margin-bottom:1rem; padding:10px 14px; background:#fafafa; border-radius:8px;">
+                    <div style="font-size:12px; color:var(--text-muted); margin-bottom:3px;">Recipient</div>
+                    <div style="font-size:13px; font-weight:600;">${fullName}</div>
+                    <div style="font-size:12px; color:var(--text-muted);">${req.department}</div>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="data-table">
+                        <thead><tr><th>Item</th><th>Qty</th><th>Decision</th><th>Release Date / Reason</th></tr></thead>
+                        <tbody>
+                        ${req.items.map((i, idx) => `
+                            <tr>
+                                <td>
+                                    ${i.consumable?.item_name ?? '—'}
+                                    <div class="cell-secondary">Available: ${i.consumable?.current_stock ?? 0} ${i.consumable?.unit ?? ''}</div>
+                                </td>
+                                <td>${i.quantity}</td>
+                                <td>
+                                    <input type="hidden" name="items[${idx}][id]" value="${i.id}">
+                                    <select name="items[${idx}][decision]" class="modal-input" style="padding:6px 10px; font-size:12px;"
+                                            onchange="window.toggleCheckRowFields(this, ${idx})">
+                                        <option value="approved">Approve</option>
+                                        <option value="rejected">Reject</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <div id="check-release-wrap-${idx}">
+                                        <input type="date" name="items[${idx}][release_date]"
+                                               class="modal-input" style="padding:6px 10px; font-size:12px;">
+                                    </div>
+                                    <div id="check-reason-wrap-${idx}" style="display:none;">
+                                        <input type="text" name="items[${idx}][rejection_reason]"
+                                               class="modal-input" style="padding:6px 10px; font-size:12px;"
+                                               placeholder="Reason for rejection...">
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            document.getElementById('check-modal').classList.add('open');
+        } catch(e) {
+            console.error('Error loading check modal:', e);
+            alert('Could not load request for review. Please try again.');
+        }
+    };
 
-async function getAvailableConsumables() {
-    if (availableConsumablesCache) return availableConsumablesCache;
-    const res = await fetch('{{ route("consumable-requests.available-items") }}');
-    availableConsumablesCache = await res.json();
-    return availableConsumablesCache;
-}
+    window.toggleCheckRowFields = function(selectEl, idx) {
+        const isApproved   = selectEl.value === 'approved';
+        const releaseWrap  = document.getElementById(`check-release-wrap-${idx}`);
+        const reasonWrap   = document.getElementById(`check-reason-wrap-${idx}`);
+        if (releaseWrap) releaseWrap.style.display = isApproved ? 'block' : 'none';
+        if (reasonWrap)  reasonWrap.style.display  = isApproved ? 'none'  : 'block';
+    };
 
-function buildErRow(idx, item, allItems) {
-    const options = allItems.map(it =>
-        `<option value="${it.id}" ${item && it.id === item.consumable_id ? 'selected' : ''}>
-            ${it.item_name} (Stock: ${it.current_stock} ${it.unit})
-         </option>`
-    ).join('');
+    // ── EDIT REQUEST MODAL ──
+    let _availableConsumablesCache = null;
+    let _erItemIdx = 0;
+    let _erAllItems = [];
 
-    return `<tr id="er-row-${idx}">
-        <td>
-            <input type="hidden" name="items[${idx}][id]" value="${item ? item.id : ''}">
-            <select name="items[${idx}][consumable_id]" class="modal-input er-select"
-                    id="er-select-${idx}" style="width:100%;">
-                <option value="">-- Search item --</option>
-                ${options}
-            </select>
-        </td>
-        <td>
-            <input type="number" min="1" name="items[${idx}][quantity]"
-                   value="${item ? item.quantity : 1}"
-                   class="modal-input" style="padding:6px 8px; font-size:12px;">
-        </td>
-        <td>
-            <input type="text" name="items[${idx}][purpose]"
-                   value="${item ? (item.purpose ?? '') : ''}"
-                   class="modal-input" style="padding:6px 8px; font-size:12px;"
-                   placeholder="Office use">
-        </td>
-        <td>
-            <select name="items[${idx}][status]" class="modal-input" style="padding:6px 8px; font-size:12px;">
-                <option value="pending"  ${item && item.status === 'pending'  ? 'selected' : ''}>Pending</option>
-                <option value="approved" ${item && item.status === 'approved' ? 'selected' : ''}>Approved</option>
-                <option value="rejected" ${item && item.status === 'rejected' ? 'selected' : ''}>Rejected</option>
-            </select>
-        </td>
-        <td>
-            <button type="button" class="table-icon-btn delete"
-                    onclick="document.getElementById('er-row-${idx}').remove()"
-                    title="Remove row">
-                <i class="ti ti-trash"></i>
-            </button>
-        </td>
-    </tr>`;
-}
+    window.getAvailableConsumables = async function() {
+        if (_availableConsumablesCache) return _availableConsumablesCache;
+        try {
+            const res = await fetch('{{ route("consumable-requests.available-items") }}');
+            _availableConsumablesCache = await res.json();
+            return _availableConsumablesCache;
+        } catch(e) {
+            console.error('Error loading available items:', e);
+            return [];
+        }
+    };
 
-function initSelect2InModal() {
-    setTimeout(() => {
+    function buildErRow(idx, item, allItems) {
+        const options = allItems.map(it =>
+            `<option value="${it.id}" ${item && it.id == item.consumable_id ? 'selected' : ''}>
+                ${it.item_name} (Stock: ${it.current_stock} ${it.unit})
+             </option>`
+        ).join('');
+
+        const releaseVal = item?.release_date ? item.release_date.substring(0, 10) : '';
+
+        return `<tr id="er-row-${idx}">
+            <td>
+                <input type="hidden" name="items[${idx}][id]" value="${item ? item.id : ''}">
+                <select name="items[${idx}][consumable_id]" class="modal-input er-select"
+                        id="er-select-${idx}" style="width:100%;">
+                    <option value="">-- Search item --</option>
+                    ${options}
+                </select>
+            </td>
+            <td>
+                <input type="number" min="1" name="items[${idx}][quantity]"
+                       value="${item ? item.quantity : 1}"
+                       class="modal-input" style="padding:6px 8px; font-size:12px;">
+            </td>
+            <td>
+                <input type="text" name="items[${idx}][purpose]"
+                       value="${item ? (item.purpose ?? '') : ''}"
+                       class="modal-input" style="padding:6px 8px; font-size:12px;"
+                       placeholder="Office use">
+            </td>
+            <td>
+                <input type="date" name="items[${idx}][release_date]"
+                       value="${releaseVal}"
+                       class="modal-input" style="padding:6px 8px; font-size:12px;">
+            </td>
+            <td>
+                <select name="items[${idx}][status]" class="modal-input" style="padding:6px 8px; font-size:12px;">
+                    <option value="pending"  ${item && item.status === 'pending'  ? 'selected' : ''}>Pending</option>
+                    <option value="approved" ${item && item.status === 'approved' ? 'selected' : ''}>Approved</option>
+                    <option value="rejected" ${item && item.status === 'rejected' ? 'selected' : ''}>Rejected</option>
+                </select>
+            </td>
+            <td>
+                <button type="button" class="table-icon-btn delete"
+                        onclick="window.erRemoveRow(${idx})"
+                        title="Remove row">
+                    <i class="ti ti-trash"></i>
+                </button>
+            </td>
+        </tr>`;
+    }
+
+    window.erRemoveRow = function(idx) {
         if (window.jQuery) {
-            jQuery('.er-select').select2({
+            const el = jQuery(`#er-select-${idx}`);
+            if (el.length && el.data('select2')) el.select2('destroy');
+        }
+        const row = document.getElementById(`er-row-${idx}`);
+        if (row) row.remove();
+    };
+
+    function initSelect2OnRow(idx) {
+        if (!window.jQuery) return;
+        const el = jQuery(`#er-select-${idx}`);
+        if (el.length && !el.data('select2')) {
+            el.select2({
                 dropdownParent: jQuery('#edit-request-modal'),
                 placeholder: 'Search item...',
                 allowClear: true,
                 width: '100%',
             });
         }
-    }, 80);
-}
+    }
 
-function erAddNewRow() {
-    const tbody = document.getElementById('er-items-body');
-    const idx   = erItemIdx++;
-    tbody.insertAdjacentHTML('beforeend', buildErRow(idx, null, erAllItems));
-    initSelect2InModal();
-}
+    function initAllSelect2() {
+        if (!window.jQuery) return;
+        setTimeout(() => {
+            jQuery('.er-select').each(function() {
+                if (!jQuery(this).data('select2')) {
+                    jQuery(this).select2({
+                        dropdownParent: jQuery('#edit-request-modal'),
+                        placeholder: 'Search item...',
+                        allowClear: true,
+                        width: '100%',
+                    });
+                }
+            });
+        }, 80);
+    }
 
-async function openEditRequestModal(id) {
-    const [req, items] = await Promise.all([
-        fetch(`/consumable-requests/${id}`).then(r => r.json()),
-        getAvailableConsumables()
-    ]);
+    window.erAddNewRow = async function() {
+        if (!_erAllItems.length) {
+            _erAllItems = await window.getAvailableConsumables();
+        }
+        const tbody = document.getElementById('er-items-body');
+        const idx   = _erItemIdx++;
+        tbody.insertAdjacentHTML('beforeend', buildErRow(idx, null, _erAllItems));
+        setTimeout(() => initSelect2OnRow(idx), 80);
+    };
 
-    erAllItems = items;
-    erItemIdx  = req.items.length;
+    window.openEditRequestModal = async function(id) {
+        try {
+            const [req, items] = await Promise.all([
+                fetch(`/consumable-requests/${id}`).then(r => r.json()),
+                window.getAvailableConsumables()
+            ]);
 
-    const mi       = req.recipient_mi ? req.recipient_mi.trim() : '';
-    const fullName = [req.recipient_first_name, mi, req.recipient_last_name].filter(Boolean).join(' ');
+            _erAllItems = items;
+            _erItemIdx  = req.items.length;
 
-    document.getElementById('er-ref-no').textContent        = req.reference_no;
-    document.getElementById('er-name-display').value        = fullName;
-    document.getElementById('er-first').value               = req.recipient_first_name;
-    document.getElementById('er-last').value                = req.recipient_last_name;
-    document.getElementById('er-mi').value                  = req.recipient_mi ?? '';
-    document.getElementById('er-dept').value                = req.department;
-    document.getElementById('er-approved').value            = req.approved_by ?? '';
-    document.getElementById('er-supply').value              = req.supply_officer ?? '';
-    document.getElementById('er-status').value              = req.status;
-    document.getElementById('edit-request-form').action     = `/consumable-requests/${id}`;
+            const mi       = req.recipient_mi ? req.recipient_mi.trim() : '';
+            const fullName = [req.recipient_first_name, mi, req.recipient_last_name].filter(Boolean).join(' ');
 
-    // Destroy existing Select2 instances before rebuilding
-    if (window.jQuery) jQuery('.er-select').select2('destroy');
+            document.getElementById('er-ref-no').textContent        = req.reference_no;
+            document.getElementById('er-name-display').value        = fullName;
+            document.getElementById('er-first').value               = req.recipient_first_name;
+            document.getElementById('er-last').value                = req.recipient_last_name;
+            document.getElementById('er-mi').value                  = req.recipient_mi ?? '';
+            document.getElementById('er-dept').value                = req.department;
+            document.getElementById('er-approved').value            = req.approved_by ?? '';
+            document.getElementById('er-supply').value              = req.supply_officer ?? '';
+            document.getElementById('er-status').value              = req.status;
+            document.getElementById('edit-request-form').action     = `/consumable-requests/${id}`;
 
-    document.getElementById('er-items-body').innerHTML = req.items
-        .map((item, idx) => buildErRow(idx, item, items))
-        .join('');
+            // Destroy all existing Select2 instances cleanly before rebuilding rows
+            if (window.jQuery) {
+                jQuery('.er-select').each(function() {
+                    if (jQuery(this).data('select2')) jQuery(this).select2('destroy');
+                });
+            }
 
-    document.getElementById('edit-request-modal').classList.add('open');
-    initSelect2InModal();
-}
+            document.getElementById('er-items-body').innerHTML = req.items
+                .map((item, idx) => buildErRow(idx, item, items))
+                .join('');
 
-document.querySelectorAll('.modal-overlay').forEach(o => {
-    o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
-});
+            document.getElementById('edit-request-modal').classList.add('open');
+            initAllSelect2();
+        } catch(e) {
+            console.error('Error loading edit modal:', e);
+            alert('Could not load request for editing. Please try again.');
+        }
+    };
 
-// ── HIGHLIGHT ROW ──
-document.addEventListener('DOMContentLoaded', function() {
-    const params      = new URLSearchParams(window.location.search);
-    const highlightId = params.get('highlight');
-    if (highlightId) {
-        const row = document.getElementById('req-row-' + highlightId);
-        if (row) {
-            row.classList.add('row-highlight-flash');
-            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            setTimeout(() => row.classList.remove('row-highlight-flash'), 3500);
+    // ── MODAL CLOSE HANDLERS ──
+    document.querySelectorAll('.modal-overlay').forEach(o => {
+        o.addEventListener('click', function(e) { 
+            if (e.target === this) this.classList.remove('open'); 
+        });
+    });
+
+    // ── HIGHLIGHT ROW ──
+    document.addEventListener('DOMContentLoaded', function() {
+        const params      = new URLSearchParams(window.location.search);
+        const highlightId = params.get('highlight');
+        if (highlightId) {
+            const row = document.getElementById('req-row-' + highlightId);
+            if (row) {
+                row.classList.add('row-highlight-flash');
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                setTimeout(() => row.classList.remove('row-highlight-flash'), 3500);
+            }
+        }
+
+        // ── BLANK RECEIPT MODAL INIT ──
+        initBlankReceiptModal();
+    });
+
+    // ── BLANK RECEIPT ──
+    window.openBlankReceiptModal = function() {
+        document.getElementById('blank-receipt-modal').classList.add('open');
+    };
+
+    function initBlankReceiptModal() {
+        const pills = document.querySelectorAll('.blank-rows-pill');
+        const customInput = document.getElementById('blank-rows-custom');
+
+        // Remove any existing listeners to prevent duplicates
+        pills.forEach(pill => {
+            pill.removeEventListener('click', handlePillClick);
+            pill.addEventListener('click', handlePillClick);
+        });
+
+        function handlePillClick() {
+            // Remove active class from all pills
+            document.querySelectorAll('.blank-rows-pill').forEach(p => p.classList.remove('active'));
+            this.classList.add('active');
+
+            // Show/hide custom input
+            if (this.dataset.value === 'custom') {
+                customInput.style.display = 'block';
+                customInput.focus();
+            } else {
+                customInput.style.display = 'none';
+                customInput.value = '';
+            }
+        }
+
+        // If custom input is shown, handle Enter key
+        if (customInput) {
+            customInput.removeEventListener('keydown', handleCustomInputKeydown);
+            customInput.addEventListener('keydown', handleCustomInputKeydown);
+        }
+
+        function handleCustomInputKeydown(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                window.generateBlankReceipt();
+            }
         }
     }
-});
+
+    window.generateBlankReceipt = function() {
+        const active = document.querySelector('.blank-rows-pill.active');
+        if (!active) {
+            alert('Please select a row count.');
+            return;
+        }
+
+        let rows = active.dataset.value;
+        if (rows === 'custom') {
+            const customInput = document.getElementById('blank-rows-custom');
+            rows = customInput.value;
+            if (!rows || rows < 1) {
+                alert('Please enter a valid number of rows (1-100).');
+                return;
+            }
+            if (rows > 100) {
+                alert('Maximum 100 rows allowed.');
+                return;
+            }
+        }
+
+        window.open(`{{ route('consumable-requests.blank-report') }}?rows=${rows}`, '_blank');
+        document.getElementById('blank-receipt-modal').classList.remove('open');
+    };
+
+})(); // End of IIFE
 </script>
 @endpush

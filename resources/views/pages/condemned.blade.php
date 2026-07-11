@@ -144,7 +144,9 @@
     <div class="modal-box-sm">
         <div class="modal-header-row">
             <div class="modal-title-sm"><i class="ti ti-rotate" style="color:var(--green-dark)"></i> Restore Equipment</div>
-            <button class="modal-close" onclick="document.getElementById('restore-modal').classList.remove('open');"><i class="ti ti-x"></i></button>
+            <button class="modal-close" onclick="window.closeModal('restore-modal')">
+                <i class="ti ti-x"></i>
+            </button>
         </div>
         <p style="font-size:13px; color:#666; margin-bottom:1rem;">
             This will restore <strong id="restore-name"></strong> back to active inventory at its original location. Use this if the item has been repaired or fixed.
@@ -262,55 +264,130 @@
 
 @push('scripts')
 <script>
-document.querySelectorAll('.condemned-pill').forEach(pill => {
-    pill.addEventListener('click', function() {
-        const name  = this.dataset.name;
-        const value = this.dataset.value;
-        document.getElementById('hidden-condemned-' + (name === 'campus_id' ? 'campus' : 'type')).value = value;
-        document.getElementById('condemned-filter-form').submit();
+// Use IIFE to avoid variable conflicts
+(function() {
+    'use strict';
+
+    function ready(fn) {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', fn);
+        } else {
+            fn();
+        }
+    }
+
+    ready(function() {
+        // ── FILTER PILLS ──
+        const filterPills = document.querySelectorAll('.condemned-pill');
+        console.log('Found condemned pills:', filterPills.length);
+        
+        filterPills.forEach(pill => {
+            pill.addEventListener('click', function() {
+                const name = this.dataset.name;
+                const value = this.dataset.value;
+                
+                const hiddenId = 'hidden-condemned-' + (name === 'campus_id' ? 'campus' : 'type');
+                const hiddenInput = document.getElementById(hiddenId);
+                const form = document.getElementById('condemned-filter-form');
+                
+                if (hiddenInput) {
+                    hiddenInput.value = value;
+                    console.log('Setting hidden input:', hiddenId, 'to', value);
+                }
+                
+                if (form) {
+                    console.log('Submitting form');
+                    form.submit();
+                }
+            });
+        });
+
+        // ── SEARCH WITH DEBOUNCE ──
+        const searchInput = document.getElementById('condemned-search');
+        let condemnedSearchTimeout = null;
+        
+        if (searchInput) {
+            console.log('Search input found, attaching listener');
+            searchInput.addEventListener('input', function() {
+                clearTimeout(condemnedSearchTimeout);
+                const val = this.value;
+                condemnedSearchTimeout = setTimeout(() => {
+                    const url = new URL(window.location);
+                    url.searchParams.set('search', val);
+                    window.location.href = url.toString();
+                }, 500);
+            });
+        } else {
+            console.warn('Search input not found');
+        }
+
+        // ── RESTORE MODAL ──
+        window.openRestoreModal = function(type, id, name) {
+            const nameEl = document.getElementById('restore-name');
+            const form = document.getElementById('restore-form');
+            const modal = document.getElementById('restore-modal');
+            
+            if (nameEl) nameEl.textContent = name;
+            if (form) form.action = `/equipment/${type}/${id}/restore`;
+            if (modal) modal.classList.add('open');
+        };
+
+        // ── WASTE MODAL ──
+        window.openWasteModal = function(type, id, name) {
+            const nameEl = document.getElementById('waste-name');
+            const form = document.getElementById('waste-form');
+            const modal = document.getElementById('waste-modal');
+            
+            if (nameEl) nameEl.textContent = name;
+            if (form) form.action = `/equipment/${type}/${id}/waste`;
+            if (modal) modal.classList.add('open');
+        };
+
+        // ── ADD CONDEMNED CAMPUS → LOCATION ──
+        const campusSelect = document.querySelector('.add-condemned-campus');
+        if (campusSelect) {
+            campusSelect.addEventListener('change', async function() {
+                const campusId = this.value;
+                const locSelect = document.querySelector('.add-condemned-location');
+                if (!locSelect) return;
+
+                locSelect.innerHTML = '<option value="">Loading...</option>';
+                if (!campusId) {
+                    locSelect.innerHTML = '<option value="">-- Unassigned / Storage --</option>';
+                    return;
+                }
+
+                try {
+                    const res = await fetch(`{{ route('equipment.locations-by-campus') }}?campus_id=${campusId}`);
+                    const data = await res.json();
+
+                    locSelect.innerHTML = '<option value="">-- Unassigned / Storage --</option>';
+                    data.forEach(loc => {
+                        locSelect.innerHTML += `<option value="${loc.id}">${loc.location_name}</option>`;
+                    });
+                } catch(e) {
+                    console.error('Error loading locations:', e);
+                    locSelect.innerHTML = '<option value="">-- Error loading --</option>';
+                }
+            });
+        }
+
+        // ── MODAL CLOSE ON OVERLAY CLICK ──
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', function(e) {
+                if (e.target === this) this.classList.remove('open');
+            });
+        });
+
+        // ── CLOSE MODAL FUNCTIONS ──
+        window.closeModal = function(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) modal.classList.remove('open');
+        };
+
+        console.log('Condemned page initialized successfully');
     });
-});
 
-let condemnedSearchTimeout;
-document.getElementById('condemned-search').addEventListener('input', function() {
-    clearTimeout(condemnedSearchTimeout);
-    const val = this.value;
-    condemnedSearchTimeout = setTimeout(() => {
-        const url = new URL(window.location);
-        url.searchParams.set('search', val);
-        window.location.href = url.toString();
-    }, 500);
-});
-
-function openRestoreModal(type, id, name) {
-    document.getElementById('restore-name').textContent = name;
-    document.getElementById('restore-form').action = `/equipment/${type}/${id}/restore`;
-    document.getElementById('restore-modal').classList.add('open');
-}
-
-function openWasteModal(type, id, name) {
-    document.getElementById('waste-name').textContent = name;
-    document.getElementById('waste-form').action = `/equipment/${type}/${id}/waste`;
-    document.getElementById('waste-modal').classList.add('open');
-}
-
-document.querySelector('.add-condemned-campus').addEventListener('change', async function() {
-    const campusId = this.value;
-    const locSelect = document.querySelector('.add-condemned-location');
-    locSelect.innerHTML = '<option value="">Loading...</option>';
-    if (!campusId) { locSelect.innerHTML = '<option value="">-- Unassigned / Storage --</option>'; return; }
-
-    const res  = await fetch(`{{ route('equipment.locations-by-campus') }}?campus_id=${campusId}`);
-    const data = await res.json();
-
-    locSelect.innerHTML = '<option value="">-- Unassigned / Storage --</option>';
-    data.forEach(loc => {
-        locSelect.innerHTML += `<option value="${loc.id}">${loc.location_name}</option>`;
-    });
-});
-
-document.querySelectorAll('.modal-overlay').forEach(o => {
-    o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
-});
+})(); // End of IIFE
 </script>
-@endpush
+@endpush    

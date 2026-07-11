@@ -89,34 +89,42 @@
             <td class="label">Supply Officer:</td>
             <td class="value" colspan="3">{{ $blankReceipt ?? false ? '' : $consumableRequest->supply_officer }}</td>
         </tr>
+        <tr>
+            <td class="label">Approved Date:</td>
+            <td class="value" colspan="5">
+                {{ ($blankReceipt ?? false) || !($consumableRequest->reviewed_at ?? null) ? '—' : $consumableRequest->reviewed_at->format('M d, Y h:i A') }}
+            </td>
+        </tr>
     </table>
 
     <table class="items-table">
         <thead>
             <tr>
                 <th style="width:4%;">#</th>
-                <th style="width:36%;">Item Description</th>
-                <th style="width:10%;">Qty</th>
-                <th style="width:12%;">Unit</th>
-                <th style="width:38%;">Purpose/Remarks</th>
+                <th style="width:30%;">Item Description</th>
+                <th style="width:8%;">Qty</th>
+                <th style="width:10%;">Unit</th>
+                <th style="width:16%;">Release Date</th>
+                <th style="width:32%;">Purpose/Remarks</th>
             </tr>
         </thead>
         <tbody>
             @php $approvedItems = $consumableRequest->items->where('status', 'approved'); @endphp
-            @for($i = 0; $i < ($blankReceipt ?? false ? 10 : max(10, $approvedItems->count())); $i++)
+            @for($i = 0; $i < ($blankReceipt ?? false ? ($blankRows ?? 10) : max(10, $approvedItems->count())); $i++)
             @php $item = $approvedItems->values()->get($i); @endphp
             <tr>
                 <td class="num">{{ $i + 1 }}</td>
                 <td>{{ $item->consumable->item_name ?? '' }}</td>
                 <td class="num">{{ $item->quantity ?? '' }}</td>
                 <td>{{ $item ? strtoupper($item->consumable->unit ?? '') : '' }}</td>
+                <td class="num">{{ $item && $item->release_date ? $item->release_date->format('M d, Y') : '' }}</td>
                 <td class="purpose-cell">{{ $item->purpose ?? '' }}</td>
             </tr>
             @endfor
             <tr class="total-row">
                 <td colspan="2">TOTAL ITEMS:</td>
                 <td class="num">{{ $blankReceipt ?? false ? '' : $approvedItems->sum('quantity') }}</td>
-                <td colspan="2"></td>
+                <td colspan="3"></td>
             </tr>
         </tbody>
     </table>

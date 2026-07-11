@@ -31,6 +31,7 @@
                 <a href="{{ route('notifications.index', ['status' => $status, 'type' => 'all']) }}" class="filter-pill {{ $type === 'all' ? 'active' : '' }}">All</a>
                 <a href="{{ route('notifications.index', ['status' => $status, 'type' => 'deletion']) }}" class="filter-pill {{ $type === 'deletion' ? 'active' : '' }}">Account Deletions</a>
                 <a href="{{ route('notifications.index', ['status' => $status, 'type' => 'consumable']) }}" class="filter-pill {{ $type === 'consumable' ? 'active' : '' }}">Consumable Requests</a>
+                <a href="{{ route('notifications.index', ['status' => $status, 'type' => 'stock']) }}" class="filter-pill {{ $type === 'stock' ? 'active' : '' }}">Out of Stock</a>
             </div>
         </div>
 
@@ -70,6 +71,8 @@
                     <td>
                         @if($notif['type'] === 'deletion')
                             <span class="chip-badge chip-status-inactive"><i class="ti ti-user-x" style="font-size:10px"></i> Account Deletion</span>
+                        @elseif($notif['type'] === 'stock')
+                            <span class="chip-badge" style="background:#f5f5f5; color:#666;"><i class="ti ti-ban" style="font-size:10px"></i> Out of Stock</span>
                         @else
                             <span class="chip-badge chip-campus"><i class="ti ti-package" style="font-size:10px"></i> Consumable Request</span>
                         @endif
@@ -105,6 +108,11 @@
                                 <a href="{{ route('consumable-requests') }}?highlight={{ $notif['id'] }}"
                                    class="table-icon-btn view" title="View Request">
                                     <i class="ti ti-arrow-right"></i>
+                                </a>
+                            @elseif($notif['type'] === 'stock')
+                                <a href="{{ route('consumables') }}?openRefill={{ $notif['id'] }}"
+                                   class="table-icon-btn" style="background:#f0faf4; color:var(--green-dark);" title="Restock Item">
+                                    <i class="ti ti-plus"></i>
                                 </a>
                             @else
                                 <span class="chip-dash">—</span>
