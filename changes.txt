@@ -153,4 +153,8 @@ July 11, 2026 - FINAL DEVELOPMENT AS OF 8:33pm
 3. Consumable System - Browse Item page
 4. Request History of Consumable page (from IMS)
 - Bubble Notification implemented in welcome page to see the system update after system are UP
-- QR Code/Generator for Scanning the QR of Consumable System implemented'
+- QR Code/Generator for Scanning the QR of Consumable System implemented
+
+July 18, 2026 - Minor Fix
+
+- UI Fix of Consumable Requests page for Admin/Super Admin of IMS
